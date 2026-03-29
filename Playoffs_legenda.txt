@@ -1,0 +1,37 @@
+Ogólne:
+  Rk – ranking (miejsce w tabeli)
+  Player – zawodnik
+  Pos – pozycja (np. PG, SG, SF, PF, C)
+  Age – wiek
+  Tm – drużyna
+  G – rozegrane mecze
+  GS – mecze w pierwszej piątce (starter)
+  MP – minuty na mecz
+
+Rzuty:
+  FG – trafione rzuty z gry
+  FGA – oddane rzuty z gry
+  FG% – skuteczność rzutów z gry
+  3P – trafione za 3
+  3PA – próby za 3
+  3P% – skuteczność za 3
+  2P – trafione za 2
+  2PA – próby za 2
+  2P% – skuteczność za 2
+  eFG% – efektywna skuteczność (uwzględnia, że 3 pkt > 2 pkt)
+
+Rzuty wolne:
+  FT – trafione wolne
+  FTA – próby wolnych
+  FT% – skuteczność wolnych
+
+Zbiórki i inne:
+  ORB – zbiórki w ataku
+  DRB – zbiórki w obronie
+  TRB – wszystkie zbiórki
+  AST – asysty
+  STL – przechwyty
+  BLK – bloki
+  TOV – straty
+  PF – faule
+  PTS – punkty
