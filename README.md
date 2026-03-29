@@ -10,13 +10,27 @@ Ranking graczy NBA Playoffs 2023/24 z wykorzystaniem trzech metod:
 2. **TOPSIS** (Technique for Order of Preference by Similarity to Ideal Solution)
 3. **Metoda Hellwiga** (syntetyczny miernik rozwoju)
 
-## Zmienne (11)
+## Zmienne (8)
 
 ### Stymulanty
-PTS, TRB, AST, STL, BLK, eFG%, FT%, 3P%, MP
+| Zmienna | Opis | Waga |
+|---------|------|------|
+| PTS | Punkty | 0.25 |
+| AST | Asysty | 0.18 |
+| TRB | Zbiorki | 0.15 |
+| eFG% | Efektywnosc rzutowa | 0.14 |
+| STL | Przechwyty | 0.10 |
+| BLK | Bloki | 0.08 |
 
 ### Destymulanty
-TOV, PF
+| Zmienna | Opis | Waga |
+|---------|------|------|
+| TOV | Straty | 0.05 |
+| PF | Faule | 0.05 |
+
+### Usuniete zmienne (z uzasadnieniem)
+- **3P%, FT%** — procenty z zerowa liczba prob (0/0) daja 0%, co nie oznacza niskiej umiejetnosci. eFG% jest lepsza syntetyczna miara skutecznosci.
+- **MP** — dane sa per-game averages, wiec czas gry jest posrednio wbudowany w inne statystyki. Wlaczenie MP powodowaloby podwojne liczenie i silna korelacje z PTS.
 
 ## Uruchomienie
 

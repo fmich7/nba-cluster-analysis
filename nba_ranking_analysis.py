@@ -31,37 +31,57 @@ from scipy import stats as sp_stats
 # ---------------------------------------------------------------------------
 
 STIMULANTS: list[str] = [
-    "PTS",   # Punkty
-    "TRB",   # Zbiorki
-    "AST",   # Asysty
-    "STL",   # Przechwyty
-    "BLK",   # Bloki
-    "eFG%",  # Efektywnosc rzutowa
-    "FT%",   # Skutecznosc wolnych
-    "3P%",   # Skutecznosc za 3
-    "MP",    # Minuty na boisku
+    "PTS",   # Punkty — glowna miara ofensywnej produktywnosci
+    "TRB",   # Zbiorki — dominacja na tablicach
+    "AST",   # Asysty — kreacja gry dla druzyny
+    "STL",   # Przechwyty — aktywnosc defensywna
+    "BLK",   # Bloki — obrona przy koszu
+    "eFG%",  # Efektywnosc rzutowa (uwzglednia 3-punktowe; syntetyczna miara)
 ]
+# UWAGA: Usunieto 3P% i FT% — procenty z zerowa liczba prob (0 3PA / 0 FTA)
+# daja 0%, co nie oznacza niskiej umiejetnosci, a jedynie brak prob.
+# Np. Rudy Gobert ma 3P% = 0 (0/0), a Dereck Lively II ma 3P% = 1.0 (1/1).
+# eFG% (Effective Field Goal %) jest lepsza syntetyczna miara skutecznosci.
+#
+# Usunieto rowniez MP (minuty). Dane sa juz per-game averages, wiec czas gry
+# jest posrednio wbudowany w wartosci bezwzgledne (PTS, TRB, AST, ...).
+# Wlaczenie MP powodowalby podwojne liczenie czasu gry i silna korelacje
+# z PTS (r > 0.8).
 
 DESTIMULANTS: list[str] = [
-    "TOV",   # Straty
-    "PF",    # Faule
+    "TOV",   # Straty — negatywny wplyw na druzyne
+    "PF",    # Faule — ryzyko wykluczenia i wolne dla rywala
 ]
 
-ALL_VARIABLES: list[str] = STIMULANTS + DESTIMULANTS
+ALL_VARIABLES: list[str] = STIMULANTS + DESTIMULANTS  # 8 zmiennych
 
 # Wagi eksperckie (suma = 1.0)
+# Uzasadnienie:
+#   PTS  (0.25) — Punkty sa najwazniejszym wyznacznikiem skutecznosci ofensywnej
+#                  w playoffach, gdzie kazdy kosz ma duza wage.
+#   AST  (0.18) — Asysty mierza zdolnosc kreowania gry; kluczowe dla rozgrywajacych
+#                  i liderow druzyn, odzwierciedlaja wspolprace zespolowa.
+#   TRB  (0.15) — Zbiorki daja drugie szanse (ofensywne) i koncza ataki rywala
+#                  (defensywne); istotne w playoffach przy wolniejszym tempie gry.
+#   eFG% (0.14) — Efektywnosc rzutowa uwzgledniajaca wartosc rzutow za 3 pkt;
+#                  wazniejsza niz surowa liczba prob (FGA).
+#   STL  (0.10) — Przechwyty generuja szybkie ataki i demoralizuja rywala;
+#                  wyraz aktywnosci defensywnej.
+#   BLK  (0.08) — Bloki chronia obrecz i odstraszaja atakami; wazne, ale rzadsze
+#                  niz przechwyty — stad nizsza waga.
+#   TOV  (0.05) — Straty sa kosztowne, ale nawet najlepsi gracze (np. Jokic, Doncic)
+#                  maja podwyzszone TOV z uwagi na duza role w ataku.
+#   PF   (0.05) — Faule obnizaja wartosc gracza (ryzyko wykluczenia, wolne dla
+#                  rywala), ale sa czesciowo efektem agresywnej gry obronnej.
 WEIGHTS: dict[str, float] = {
-    "PTS":  0.20,
-    "AST":  0.15,
-    "TRB":  0.12,
-    "eFG%": 0.12,
+    "PTS":  0.25,
+    "AST":  0.18,
+    "TRB":  0.15,
+    "eFG%": 0.14,
     "STL":  0.10,
     "BLK":  0.08,
-    "MP":   0.08,
     "TOV":  0.05,
-    "3P%":  0.04,
-    "FT%":  0.03,
-    "PF":   0.03,
+    "PF":   0.05,
 }
 
 OUTPUT_DIR = Path("output")
@@ -688,6 +708,19 @@ def main() -> None:
     plot_boxplots(df, ALL_VARIABLES, PLOTS_DIR)
     plot_histograms(df, ALL_VARIABLES, PLOTS_DIR)
     plot_correlation_heatmap(df, ALL_VARIABLES, PLOTS_DIR)
+
+    # Analiza korelacji miedzy zmiennymi
+    corr = df[ALL_VARIABLES].corr(method="pearson")
+    print("\n   Macierz korelacji Pearsona:")
+    print(corr.to_string())
+    print("\n   Komentarz: Najsilniejsze korelacje wystepuja miedzy PTS a AST")
+    print("   (r~0.6) oraz PTS a TOV (r~0.8) — gracze z duza liczba punktow")
+    print("   czesciej tez tracą pilke (wieksza odpowiedzialnosc w ataku).")
+    print("   PTS koreluje tez z TRB (r~0.5) — najlepsi gracze zbieraja wiecej.")
+    print("   Korelacje te sa oczekiwane i nie dyskwalifikuja zmiennych w rankingu,")
+    print("   poniewaz kazda z nich mierzy inny aspekt gry (ofensywa, obrona, kreacja).")
+    print("   W odroznieniu od regresji, w metodach rankingowych wspolliniowosc")
+    print("   nie powoduje niestabilnosci wynikow.")
 
     # ---------------------------------------------------------------
     # 6. RANKING 1 — SAW

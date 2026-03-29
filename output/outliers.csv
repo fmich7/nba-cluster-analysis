@@ -1,4 +1,4 @@
-Zmienna,Gracz,Pozycja,Wartosc,Dolna_granica,Gorna_granica
+Zmienna,Gracz,Pozycja,Wartość,Dolna gr.,Górna gr.
 PTS,Joel Embiid,C,33.0,-7.05,32.55
 TRB,Jarrett Allen,C,13.8,-1.95,12.05
 TRB,Anthony Davis,C,15.6,-1.95,12.05
@@ -9,23 +9,4 @@ BLK,Evan Mobley,PF,2.2,-0.7,1.7
 eFG%,Jose Alvarado,PG,0.175,0.362,0.698
 eFG%,Russell Westbrook,PG,0.3,0.362,0.698
 eFG%,Delon Wright,PG,0.75,0.362,0.698
-FT%,Jose Alvarado,PG,0.0,0.335,1.231
-FT%,Malik Beasley,SG,0.0,0.335,1.231
-FT%,Amir Coffey,SF,0.0,0.335,1.231
-FT%,Isaiah Joe,SG,0.0,0.335,1.231
-FT%,Trey Murphy III,SF,0.0,0.335,1.231
-FT%,Royce O'Neale,SF,0.0,0.335,1.231
-3P%,Precious Achiuwa,PF,0.0,0.083,0.59
-3P%,Jarrett Allen,C,0.0,0.083,0.59
-3P%,Jose Alvarado,PG,0.071,0.083,0.59
-3P%,Anthony Davis,C,0.0,0.083,0.59
-3P%,Markelle Fultz,PG,0.0,0.083,0.59
-3P%,Daniel Gafford,PF,0.0,0.083,0.59
-3P%,Rudy Gobert,C,0.0,0.083,0.59
-3P%,Dereck Lively II,C,1.0,0.083,0.59
-3P%,Jusuf Nurki?,C,0.0,0.083,0.59
-3P%,Mitchell Robinson,C,0.0,0.083,0.59
-3P%,Jonas Valan?i?nas,C,0.0,0.083,0.59
-3P%,Delon Wright,PG,0.6,0.083,0.59
-3P%,Ivica Zubac,C,0.0,0.083,0.59
 TOV,Paolo Banchero,PF,4.6,-1.3,4.3
