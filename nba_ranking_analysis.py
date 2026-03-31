@@ -17,6 +17,7 @@ import argparse
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -31,11 +32,11 @@ from scipy import stats as sp_stats
 # ---------------------------------------------------------------------------
 
 STIMULANTS: list[str] = [
-    "PTS",   # Punkty — glowna miara ofensywnej produktywnosci
-    "TRB",   # Zbiorki — dominacja na tablicach
-    "AST",   # Asysty — kreacja gry dla druzyny
-    "STL",   # Przechwyty — aktywnosc defensywna
-    "BLK",   # Bloki — obrona przy koszu
+    "PTS",  # Punkty — glowna miara ofensywnej produktywnosci
+    "TRB",  # Zbiorki — dominacja na tablicach
+    "AST",  # Asysty — kreacja gry dla druzyny
+    "STL",  # Przechwyty — aktywnosc defensywna
+    "BLK",  # Bloki — obrona przy koszu
     "eFG%",  # Efektywnosc rzutowa (uwzglednia 3-punktowe; syntetyczna miara)
 ]
 # UWAGA: Usunieto 3P% i FT% — procenty z zerowa liczba prob (0 3PA / 0 FTA)
@@ -49,8 +50,8 @@ STIMULANTS: list[str] = [
 # z PTS (r > 0.8).
 
 DESTIMULANTS: list[str] = [
-    "TOV",   # Straty — negatywny wplyw na druzyne
-    "PF",    # Faule — ryzyko wykluczenia i wolne dla rywala
+    "TOV",  # Straty — negatywny wplyw na druzyne
+    "PF",  # Faule — ryzyko wykluczenia i wolne dla rywala
 ]
 
 ALL_VARIABLES: list[str] = STIMULANTS + DESTIMULANTS  # 8 zmiennych
@@ -74,41 +75,52 @@ ALL_VARIABLES: list[str] = STIMULANTS + DESTIMULANTS  # 8 zmiennych
 #   PF   (0.05) — Faule obnizaja wartosc gracza (ryzyko wykluczenia, wolne dla
 #                  rywala), ale sa czesciowo efektem agresywnej gry obronnej.
 WEIGHTS: dict[str, float] = {
-    "PTS":  0.25,
-    "AST":  0.18,
-    "TRB":  0.15,
+    "PTS": 0.25,
+    "AST": 0.18,
+    "TRB": 0.15,
     "eFG%": 0.14,
-    "STL":  0.10,
-    "BLK":  0.08,
-    "TOV":  0.05,
-    "PF":   0.05,
+    "STL": 0.10,
+    "BLK": 0.08,
+    "TOV": 0.05,
+    "PF": 0.05,
 }
 
 OUTPUT_DIR = Path("output")
 PLOTS_DIR = OUTPUT_DIR / "plots"
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Ranking graczy NBA Playoffs — SAW, TOPSIS, Hellwig"
     )
-    p.add_argument("--csv", type=str, default="Playoffs.csv",
-                    help="Sciezka do pliku CSV (domyslnie Playoffs.csv)")
-    p.add_argument("--min-games", type=int, default=4,
-                    help="Minimalna liczba meczow (domyslnie 4)")
-    p.add_argument("--min-mp", type=float, default=15.0,
-                    help="Minimalna srednia minut na mecz (domyslnie 15)")
-    p.add_argument("--top-n", type=int, default=20,
-                    help="Ilu graczy pokazac w tabelach top (domyslnie 20)")
+    p.add_argument(
+        "--csv",
+        type=str,
+        default="Playoffs.csv",
+        help="Sciezka do pliku CSV (domyslnie Playoffs.csv)",
+    )
+    p.add_argument(
+        "--min-games", type=int, default=4, help="Minimalna liczba meczow (domyslnie 4)"
+    )
+    p.add_argument(
+        "--min-mp",
+        type=float,
+        default=15.0,
+        help="Minimalna srednia minut na mecz (domyslnie 15)",
+    )
+    p.add_argument(
+        "--top-n",
+        type=int,
+        default=20,
+        help="Ilu graczy pokazac w tabelach top (domyslnie 20)",
+    )
     return p.parse_args()
 
 
 # ---------------------------------------------------------------------------
 # Wczytanie i filtrowanie
 # ---------------------------------------------------------------------------
+
 
 def load_and_filter(csv_path: str, min_games: int, min_mp: float) -> pd.DataFrame:
     """Wczytaj CSV, konwertuj numerycznie, odfiltruj graczy z za malym sample size."""
@@ -126,7 +138,9 @@ def load_and_filter(csv_path: str, min_games: int, min_mp: float) -> pd.DataFram
     df = df[(df["G"] >= min_games) & (df["MP"] >= min_mp)].copy()
     df = df.reset_index(drop=True)
 
-    print(f"Wczytano {n_before} graczy, po filtrach (G>={min_games}, MP>={min_mp}): {len(df)}")
+    print(
+        f"Wczytano {n_before} graczy, po filtrach (G>={min_games}, MP>={min_mp}): {len(df)}"
+    )
     return df
 
 
@@ -134,21 +148,24 @@ def load_and_filter(csv_path: str, min_games: int, min_mp: float) -> pd.DataFram
 # Wstepna analiza danych
 # ---------------------------------------------------------------------------
 
+
 def descriptive_statistics(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     """Statystyki opisowe: srednia, mediana, min, max, std, skosnosc."""
     records = []
     for var in variables:
         vals = df[var].dropna()
-        records.append({
-            "Zmienna": var,
-            "Srednia": round(vals.mean(), 3),
-            "Mediana": round(vals.median(), 3),
-            "Minimum": round(vals.min(), 3),
-            "Maksimum": round(vals.max(), 3),
-            "Odch. std.": round(vals.std(ddof=1), 3),
-            "Skosnosc": round(sp_stats.skew(vals, bias=False), 3),
-            "N": len(vals),
-        })
+        records.append(
+            {
+                "Zmienna": var,
+                "Srednia": round(vals.mean(), 3),
+                "Mediana": round(vals.median(), 3),
+                "Minimum": round(vals.min(), 3),
+                "Maksimum": round(vals.max(), 3),
+                "Odch. std.": round(vals.std(ddof=1), 3),
+                "Skosnosc": round(sp_stats.skew(vals, bias=False), 3),
+                "N": len(vals),
+            }
+        )
     stats_df = pd.DataFrame(records)
     return stats_df
 
@@ -164,14 +181,16 @@ def detect_outliers_iqr(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
         mask = (df[var] < lower) | (df[var] > upper)
         outliers = df.loc[mask, ["Player", "Pos", var]]
         for _, row in outliers.iterrows():
-            outlier_records.append({
-                "Zmienna": var,
-                "Gracz": row["Player"],
-                "Pozycja": row["Pos"],
-                "Wartosc": row[var],
-                "Dolna_granica": round(lower, 3),
-                "Gorna_granica": round(upper, 3),
-            })
+            outlier_records.append(
+                {
+                    "Zmienna": var,
+                    "Gracz": row["Player"],
+                    "Pozycja": row["Pos"],
+                    "Wartosc": row[var],
+                    "Dolna_granica": round(lower, 3),
+                    "Gorna_granica": round(upper, 3),
+                }
+            )
     return pd.DataFrame(outlier_records)
 
 
@@ -180,17 +199,20 @@ def check_missing_data(df: pd.DataFrame, variables: list[str]) -> pd.DataFrame:
     records = []
     for var in variables:
         n_missing = df[var].isna().sum()
-        records.append({
-            "Zmienna": var,
-            "Braki": n_missing,
-            "Procent_brakow": round(100 * n_missing / len(df), 2),
-        })
+        records.append(
+            {
+                "Zmienna": var,
+                "Braki": n_missing,
+                "Procent_brakow": round(100 * n_missing / len(df), 2),
+            }
+        )
     return pd.DataFrame(records)
 
 
 # ---------------------------------------------------------------------------
 # Wizualizacje — wstepna analiza
 # ---------------------------------------------------------------------------
+
 
 def plot_boxplots(df: pd.DataFrame, variables: list[str], out_dir: Path) -> None:
     """Boxploty dla kazdej zmiennej — dwa panele."""
@@ -204,9 +226,13 @@ def plot_boxplots(df: pd.DataFrame, variables: list[str], out_dir: Path) -> None
     for i, var in enumerate(variables):
         ax = axes[i]
         vals = df[var].dropna()
-        bp = ax.boxplot(vals, vert=True, patch_artist=True,
-                        boxprops=dict(facecolor="#4C72B0", alpha=0.7),
-                        medianprops=dict(color="yellow", linewidth=2))
+        bp = ax.boxplot(
+            vals,
+            vert=True,
+            patch_artist=True,
+            boxprops=dict(facecolor="#4C72B0", alpha=0.7),
+            medianprops=dict(color="yellow", linewidth=2),
+        )
         ax.set_title(var, fontsize=11, fontweight="bold")
         ax.set_xticks([])
 
@@ -247,14 +273,25 @@ def plot_histograms(df: pd.DataFrame, variables: list[str], out_dir: Path) -> No
     print(f"  Zapisano: {out_dir / 'histograms.png'}")
 
 
-def plot_correlation_heatmap(df: pd.DataFrame, variables: list[str], out_dir: Path) -> None:
+def plot_correlation_heatmap(
+    df: pd.DataFrame, variables: list[str], out_dir: Path
+) -> None:
     """Heatmapa korelacji Pearsona miedzy zmiennymi."""
     corr = df[variables].corr(method="pearson")
 
     fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr, annot=True, fmt=".2f", cmap="RdBu_r", center=0,
-                square=True, linewidths=0.5, ax=ax,
-                xticklabels=variables, yticklabels=variables)
+    sns.heatmap(
+        corr,
+        annot=True,
+        fmt=".2f",
+        cmap="RdBu_r",
+        center=0,
+        square=True,
+        linewidths=0.5,
+        ax=ax,
+        xticklabels=variables,
+        yticklabels=variables,
+    )
     ax.set_title("Macierz korelacji Pearsona", fontsize=14, fontweight="bold")
     fig.tight_layout()
     fig.savefig(out_dir / "correlation_heatmap.png", dpi=150, bbox_inches="tight")
@@ -266,10 +303,13 @@ def plot_correlation_heatmap(df: pd.DataFrame, variables: list[str], out_dir: Pa
 # Metody rankingowe
 # ---------------------------------------------------------------------------
 
-def ranking_saw(df: pd.DataFrame,
-                stimulants: list[str],
-                destimulants: list[str],
-                weights: dict[str, float]) -> pd.DataFrame:
+
+def ranking_saw(
+    df: pd.DataFrame,
+    stimulants: list[str],
+    destimulants: list[str],
+    weights: dict[str, float],
+) -> pd.DataFrame:
     """
     SAW (Simple Additive Weighting) z normalizacja min-max.
 
@@ -299,7 +339,9 @@ def ranking_saw(df: pd.DataFrame,
         w = weights.get(var, 0.0)
         score += w * result[f"{var}_norm"].values
     result["SAW_score"] = score
-    result["SAW_rank"] = result["SAW_score"].rank(ascending=False, method="min").astype(int)
+    result["SAW_rank"] = (
+        result["SAW_score"].rank(ascending=False, method="min").astype(int)
+    )
     result = result.sort_values("SAW_rank").reset_index(drop=True)
 
     # Wyczysc kolumny pomocnicze
@@ -308,10 +350,12 @@ def ranking_saw(df: pd.DataFrame,
     return result
 
 
-def ranking_topsis(df: pd.DataFrame,
-                   stimulants: list[str],
-                   destimulants: list[str],
-                   weights: dict[str, float]) -> pd.DataFrame:
+def ranking_topsis(
+    df: pd.DataFrame,
+    stimulants: list[str],
+    destimulants: list[str],
+    weights: dict[str, float],
+) -> pd.DataFrame:
     """
     TOPSIS (Hwang & Yoon, 1981).
 
@@ -329,7 +373,7 @@ def ranking_topsis(df: pd.DataFrame,
     norm_matrix = np.zeros((n, len(all_vars)))
     for j, var in enumerate(all_vars):
         vals = df[var].values.astype(float)
-        denom = np.sqrt(np.sum(vals ** 2))
+        denom = np.sqrt(np.sum(vals**2))
         if denom == 0:
             norm_matrix[:, j] = 0.0
         else:
@@ -360,14 +404,16 @@ def ranking_topsis(df: pd.DataFrame,
     score = d_minus / denom
 
     result["TOPSIS_score"] = score
-    result["TOPSIS_rank"] = result["TOPSIS_score"].rank(ascending=False, method="min").astype(int)
+    result["TOPSIS_rank"] = (
+        result["TOPSIS_score"].rank(ascending=False, method="min").astype(int)
+    )
     result = result.sort_values("TOPSIS_rank").reset_index(drop=True)
     return result
 
 
-def ranking_hellwig(df: pd.DataFrame,
-                    stimulants: list[str],
-                    destimulants: list[str]) -> pd.DataFrame:
+def ranking_hellwig(
+    df: pd.DataFrame, stimulants: list[str], destimulants: list[str]
+) -> pd.DataFrame:
     """
     Metoda Hellwiga (1968) — syntetyczny miernik rozwoju.
 
@@ -412,7 +458,9 @@ def ranking_hellwig(df: pd.DataFrame,
     score = 1.0 - d / d_0
 
     result["Hellwig_score"] = score
-    result["Hellwig_rank"] = result["Hellwig_score"].rank(ascending=False, method="min").astype(int)
+    result["Hellwig_rank"] = (
+        result["Hellwig_score"].rank(ascending=False, method="min").astype(int)
+    )
     result = result.sort_values("Hellwig_rank").reset_index(drop=True)
     return result
 
@@ -420,6 +468,7 @@ def ranking_hellwig(df: pd.DataFrame,
 # ---------------------------------------------------------------------------
 # Porownanie rankingów
 # ---------------------------------------------------------------------------
+
 
 def compare_rankings(
     rankings: dict[str, pd.DataFrame], top_n: int
@@ -440,7 +489,9 @@ def compare_rankings(
     method_names = [c.replace("_rank", "") for c in rank_cols]
 
     print("\n=== KORELACJA SPEARMANA MIEDZY RANKINGAMI ===")
-    spearman_matrix = pd.DataFrame(index=method_names, columns=method_names, dtype=float)
+    spearman_matrix = pd.DataFrame(
+        index=method_names, columns=method_names, dtype=float
+    )
     for i, m1 in enumerate(method_names):
         for j, m2 in enumerate(method_names):
             r1 = merged[f"{m1}_rank"].values
@@ -470,10 +521,12 @@ def compare_rankings(
     top_table["Srednia_ranga"] = rank_vals.mean(axis=1)
     top_table = top_table.sort_values("Srednia_ranga").reset_index(drop=True)
 
-    display_cols = ["Player", "Pos", "Tm"] + \
-                   [f"{m}_score" for m in method_names] + \
-                   [f"{m}_rank" for m in method_names] + \
-                   ["Srednia_ranga"]
+    display_cols = (
+        ["Player", "Pos", "Tm"]
+        + [f"{m}_score" for m in method_names]
+        + [f"{m}_rank" for m in method_names]
+        + ["Srednia_ranga"]
+    )
     display_cols = [c for c in display_cols if c in top_table.columns]
 
     print(f"\n=== TOP {top_n} GRACZY (wg sredniej rangi) ===")
@@ -486,7 +539,10 @@ def compare_rankings(
 # Wizualizacje — wyniki
 # ---------------------------------------------------------------------------
 
-def plot_ranking_bars(rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Path) -> None:
+
+def plot_ranking_bars(
+    rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Path
+) -> None:
     """Barploty top N graczy dla kazdego rankingu."""
     n_methods = len(rankings)
     fig, axes = plt.subplots(1, n_methods, figsize=(7 * n_methods, max(8, top_n * 0.4)))
@@ -503,21 +559,30 @@ def plot_ranking_bars(rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Pa
         players = top["Player"].values
         scores = top[score_col].values
 
-        bars = ax.barh(range(len(players)), scores, color=colors[idx % len(colors)], alpha=0.85)
+        bars = ax.barh(
+            range(len(players)), scores, color=colors[idx % len(colors)], alpha=0.85
+        )
         ax.set_yticks(range(len(players)))
         ax.set_yticklabels(players, fontsize=9)
         ax.set_xlabel("Score", fontsize=11)
         ax.set_title(f"Top {top_n} — {name}", fontsize=13, fontweight="bold")
         ax.invert_xaxis() if False else None  # score rosnacy w prawo
 
-    fig.suptitle(f"Rankingi graczy NBA Playoffs — Top {top_n}", fontsize=15, fontweight="bold", y=1.02)
+    fig.suptitle(
+        f"Rankingi graczy NBA Playoffs — Top {top_n}",
+        fontsize=15,
+        fontweight="bold",
+        y=1.02,
+    )
     fig.tight_layout()
     fig.savefig(out_dir / "ranking_barplots.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Zapisano: {out_dir / 'ranking_barplots.png'}")
 
 
-def plot_bump_chart(rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Path) -> None:
+def plot_bump_chart(
+    rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Path
+) -> None:
     """Bump chart — porownanie pozycji gracza miedzy rankingami."""
     method_names = list(rankings.keys())
 
@@ -562,14 +627,23 @@ def plot_bump_chart(rankings: dict[str, pd.DataFrame], top_n: int, out_dir: Path
                 short = parts[0][0] + ". " + " ".join(parts[1:])
             else:
                 short = player
-            ax.annotate(short, (xs[-1] + 0.05, ys[-1]),
-                        fontsize=7, va="center", color=color, fontweight="bold")
+            ax.annotate(
+                short,
+                (xs[-1] + 0.05, ys[-1]),
+                fontsize=7,
+                va="center",
+                color=color,
+                fontweight="bold",
+            )
 
     ax.set_xticks(range(len(method_names)))
     ax.set_xticklabels(method_names, fontsize=12, fontweight="bold")
     ax.set_ylabel("Pozycja w rankingu", fontsize=12)
-    ax.set_title(f"Bump chart — porownanie rankingów (gracze w top {top_n})",
-                 fontsize=14, fontweight="bold")
+    ax.set_title(
+        f"Bump chart — porownanie rankingów (gracze w top {top_n})",
+        fontsize=14,
+        fontweight="bold",
+    )
     ax.invert_yaxis()  # 1. miejsce na gorze
     ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     ax.grid(axis="y", alpha=0.3)
@@ -584,11 +658,22 @@ def plot_spearman_heatmap(spearman_matrix: pd.DataFrame, out_dir: Path) -> None:
     """Heatmapa korelacji Spearmana miedzy rankingami."""
     fig, ax = plt.subplots(figsize=(6, 5))
     vals = spearman_matrix.values.astype(float)
-    sns.heatmap(vals, annot=True, fmt=".4f", cmap="YlGn",
-                xticklabels=spearman_matrix.columns,
-                yticklabels=spearman_matrix.index,
-                vmin=0.8, vmax=1.0, square=True, linewidths=1, ax=ax)
-    ax.set_title("Korelacja Spearmana miedzy rankingami", fontsize=13, fontweight="bold")
+    sns.heatmap(
+        vals,
+        annot=True,
+        fmt=".4f",
+        cmap="YlGn",
+        xticklabels=spearman_matrix.columns,
+        yticklabels=spearman_matrix.index,
+        vmin=0.8,
+        vmax=1.0,
+        square=True,
+        linewidths=1,
+        ax=ax,
+    )
+    ax.set_title(
+        "Korelacja Spearmana miedzy rankingami", fontsize=13, fontweight="bold"
+    )
     fig.tight_layout()
     fig.savefig(out_dir / "spearman_heatmap.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -628,7 +713,9 @@ def plot_rank_scatter(rankings: dict[str, pd.DataFrame], out_dir: Path) -> None:
         ax.set_title(f"{m1} vs {m2}", fontsize=12, fontweight="bold")
         ax.set_aspect("equal")
 
-    fig.suptitle("Porownanie rang miedzy metodami", fontsize=14, fontweight="bold", y=1.02)
+    fig.suptitle(
+        "Porownanie rang miedzy metodami", fontsize=14, fontweight="bold", y=1.02
+    )
     fig.tight_layout()
     fig.savefig(out_dir / "rank_scatter.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -638,6 +725,7 @@ def plot_rank_scatter(rankings: dict[str, pd.DataFrame], out_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     args = parse_args()
@@ -718,7 +806,9 @@ def main() -> None:
     print("   czesciej tez tracą pilke (wieksza odpowiedzialnosc w ataku).")
     print("   PTS koreluje tez z TRB (r~0.5) — najlepsi gracze zbieraja wiecej.")
     print("   Korelacje te sa oczekiwane i nie dyskwalifikuja zmiennych w rankingu,")
-    print("   poniewaz kazda z nich mierzy inny aspekt gry (ofensywa, obrona, kreacja).")
+    print(
+        "   poniewaz kazda z nich mierzy inny aspekt gry (ofensywa, obrona, kreacja)."
+    )
     print("   W odroznieniu od regresji, w metodach rankingowych wspolliniowosc")
     print("   nie powoduje niestabilnosci wynikow.")
 
@@ -730,7 +820,11 @@ def main() -> None:
     print("=" * 60)
     saw_df = ranking_saw(df, STIMULANTS, DESTIMULANTS, WEIGHTS)
     print(f"   Top 10 SAW:")
-    print(saw_df[["Player", "Pos", "Tm", "SAW_score", "SAW_rank"]].head(10).to_string(index=False))
+    print(
+        saw_df[["Player", "Pos", "Tm", "SAW_score", "SAW_rank"]]
+        .head(10)
+        .to_string(index=False)
+    )
     saw_df.to_csv(OUTPUT_DIR / "ranking_saw.csv", index=False)
     print(f"   Zapisano: {OUTPUT_DIR / 'ranking_saw.csv'}")
 
@@ -742,7 +836,11 @@ def main() -> None:
     print("=" * 60)
     topsis_df = ranking_topsis(df, STIMULANTS, DESTIMULANTS, WEIGHTS)
     print(f"   Top 10 TOPSIS:")
-    print(topsis_df[["Player", "Pos", "Tm", "TOPSIS_score", "TOPSIS_rank"]].head(10).to_string(index=False))
+    print(
+        topsis_df[["Player", "Pos", "Tm", "TOPSIS_score", "TOPSIS_rank"]]
+        .head(10)
+        .to_string(index=False)
+    )
     topsis_df.to_csv(OUTPUT_DIR / "ranking_topsis.csv", index=False)
     print(f"   Zapisano: {OUTPUT_DIR / 'ranking_topsis.csv'}")
 
@@ -754,7 +852,11 @@ def main() -> None:
     print("=" * 60)
     hellwig_df = ranking_hellwig(df, STIMULANTS, DESTIMULANTS)
     print(f"   Top 10 Hellwig:")
-    print(hellwig_df[["Player", "Pos", "Tm", "Hellwig_score", "Hellwig_rank"]].head(10).to_string(index=False))
+    print(
+        hellwig_df[["Player", "Pos", "Tm", "Hellwig_score", "Hellwig_rank"]]
+        .head(10)
+        .to_string(index=False)
+    )
     hellwig_df.to_csv(OUTPUT_DIR / "ranking_hellwig.csv", index=False)
     print(f"   Zapisano: {OUTPUT_DIR / 'ranking_hellwig.csv'}")
 
@@ -803,8 +905,10 @@ def main() -> None:
     # Najlepszy gracz wg kazdej metody
     for name, rdf in rankings.items():
         best = rdf.iloc[0]
-        print(f"  Najlepszy wg {name}: {best['Player']} ({best['Pos']}, {best['Tm']}) "
-              f"— score: {best[f'{name}_score']:.4f}")
+        print(
+            f"  Najlepszy wg {name}: {best['Player']} ({best['Pos']}, {best['Tm']}) "
+            f"— score: {best[f'{name}_score']:.4f}"
+        )
 
 
 if __name__ == "__main__":
