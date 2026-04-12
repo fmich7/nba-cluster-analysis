@@ -171,6 +171,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
 from scipy import stats as sp_stats
+from pathlib import Path
 
 # Konfiguracja wykresow
 plt.rcParams.update({
@@ -180,6 +181,10 @@ plt.rcParams.update({
     "axes.labelsize": 10,
 })
 sns.set_style("whitegrid")
+
+# Katalog na wykresy/tabele PNG
+PLOTS_DIR = Path("output/plots")
+PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Konfiguracja zmiennych i wag ---
 STIMULANTS = ["PTS", "TRB", "AST", "STL", "BLK", "eFG%"]
@@ -194,6 +199,64 @@ WEIGHTS = {
 print(f"Suma wag: {sum(WEIGHTS.values()):.2f}")
 print(f"Stymulanty ({len(STIMULANTS)}): {STIMULANTS}")
 print(f"Destymulanty ({len(DESTIMULANTS)}): {DESTIMULANTS}")
+""")
+
+code("""def render_table(df, title="", filename=None, col_widths=None, highlight_col=None,
+                 fontsize=9, header_color="#4C72B0", row_colors=("#f7f7f7", "#ffffff"),
+                 title_fontsize=13, figscale=1.0):
+    # Renders a DataFrame as a styled matplotlib table figure.
+    # Saves to output/plots/<filename>.png if filename is given.
+    nrows, ncols = df.shape
+    fig_width = max(ncols * 1.4 * figscale, 8)
+    row_h = 0.35
+    fig_height = (nrows + 1) * row_h * figscale + (0.8 if title else 0.3)
+
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    ax.axis("off")
+
+    # Build table — use bbox to fill the axes area
+    tbl = ax.table(cellText=df.values, colLabels=df.columns,
+                   cellLoc="center", loc="upper center")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(fontsize)
+    tbl.scale(1.0, 1.6)
+
+    # Style header
+    for j in range(ncols):
+        cell = tbl[0, j]
+        cell.set_facecolor(header_color)
+        cell.set_text_props(color="white", fontweight="bold", fontsize=fontsize)
+        cell.set_edgecolor("white")
+
+    # Style body rows
+    for i in range(1, nrows + 1):
+        bg = row_colors[0] if i % 2 == 1 else row_colors[1]
+        for j in range(ncols):
+            cell = tbl[i, j]
+            cell.set_facecolor(bg)
+            cell.set_edgecolor("#dddddd")
+            if highlight_col is not None and j == highlight_col:
+                cell.set_text_props(fontweight="bold")
+
+    # Column widths
+    if col_widths:
+        for j, w in enumerate(col_widths):
+            for i in range(nrows + 1):
+                tbl[i, j].set_width(w)
+    else:
+        tbl.auto_set_column_width(list(range(ncols)))
+
+    if title:
+        ax.set_title(title, fontsize=title_fontsize, fontweight="bold",
+                     pad=12, loc="center")
+
+    fig.tight_layout()
+
+    if filename:
+        fig.savefig(PLOTS_DIR / f"{filename}.png", dpi=150, bbox_inches="tight",
+                    facecolor="white", edgecolor="none")
+
+    plt.show()
 """)
 
 code(r"""# Wczytanie danych
@@ -238,17 +301,17 @@ for var in ALL_VARIABLES:
     missing_info.append({
         "Zmienna": var,
         "Braki": n_miss,
-        "% braków": f"{100 * n_miss / len(df):.2f}%"
+        "% brakow": f"{100 * n_miss / len(df):.2f}%"
     })
 
 missing_df = pd.DataFrame(missing_info)
-print("Braki danych w zmiennych diagnostycznych:")
-print(missing_df.to_string(index=False))
+render_table(missing_df, title="Braki danych w zmiennych diagnostycznych",
+             filename="tab_missing_data")
 
 if missing_df["Braki"].sum() == 0:
-    print("\n=> Brak braków danych w wybranych zmiennych. Imputacja nie jest wymagana.")
+    print("=> Brak brakow danych w wybranych zmiennych. Imputacja nie jest wymagana.")
 else:
-    print("\n=> Braki danych uzupelniono mediana.")
+    print("=> Braki danych uzupelniono mediana.")
     for var in ALL_VARIABLES:
         if df[var].isna().any():
             df[var] = df[var].fillna(df[var].median())
@@ -265,17 +328,18 @@ for var in ALL_VARIABLES:
     vals = df[var].dropna()
     records.append({
         "Zmienna": var,
-        "Średnia": round(vals.mean(), 3),
+        "Srednia": round(vals.mean(), 3),
         "Mediana": round(vals.median(), 3),
-        "Minimum": round(vals.min(), 3),
-        "Maksimum": round(vals.max(), 3),
-        "Odch. std.": round(vals.std(ddof=1), 3),
-        "Skośność": round(sp_stats.skew(vals, bias=False), 3),
+        "Min": round(vals.min(), 3),
+        "Max": round(vals.max(), 3),
+        "Odch.std.": round(vals.std(ddof=1), 3),
+        "Skosnosc": round(sp_stats.skew(vals, bias=False), 3),
         "N": len(vals),
     })
 
 stats_df = pd.DataFrame(records)
-stats_df
+render_table(stats_df, title="Statystyki opisowe zmiennych diagnostycznych",
+             filename="tab_descriptive_stats")
 """)
 
 md(r"""**Komentarz do statystyk opisowych:**
@@ -353,14 +417,15 @@ for var in ALL_VARIABLES:
             "Zmienna": var,
             "Gracz": row["Player"],
             "Pozycja": row["Pos"],
-            "Wartość": row[var],
+            "Wartosc": row[var],
             "Dolna gr.": round(lower, 3),
-            "Górna gr.": round(upper, 3),
+            "Gorna gr.": round(upper, 3),
         })
 
 outliers_df = pd.DataFrame(outlier_records)
-print(f"Wykryto {len(outliers_df)} obserwacji odstających:")
-outliers_df
+print(f"Wykryto {len(outliers_df)} obserwacji odstajacych:")
+render_table(outliers_df, title="Obserwacje odstajace (metoda IQR)",
+             filename="tab_outliers")
 """)
 
 md(r"""**Decyzja:** Obserwacje odstające **nie są usuwane**.
@@ -463,8 +528,10 @@ code("""def ranking_saw(df, stimulants, destimulants, weights):
     return result
 
 saw_df = ranking_saw(df, STIMULANTS, DESTIMULANTS, WEIGHTS)
-print("=== TOP 15 — SAW ===")
-saw_df[["Player", "Pos", "Tm", "SAW_score", "SAW_rank"]].head(15)
+top15_saw = saw_df[["Player", "Pos", "Tm", "SAW_score", "SAW_rank"]].head(15).copy()
+top15_saw["SAW_score"] = top15_saw["SAW_score"].round(4)
+render_table(top15_saw, title="Top 15 graczy — SAW", filename="tab_top15_saw",
+             highlight_col=0)
 """)
 
 # --- TOPSIS ---
@@ -534,8 +601,10 @@ code("""def ranking_topsis(df, stimulants, destimulants, weights):
     return result
 
 topsis_df = ranking_topsis(df, STIMULANTS, DESTIMULANTS, WEIGHTS)
-print("=== TOP 15 — TOPSIS ===")
-topsis_df[["Player", "Pos", "Tm", "TOPSIS_score", "TOPSIS_rank"]].head(15)
+top15_topsis = topsis_df[["Player", "Pos", "Tm", "TOPSIS_score", "TOPSIS_rank"]].head(15).copy()
+top15_topsis["TOPSIS_score"] = top15_topsis["TOPSIS_score"].round(4)
+render_table(top15_topsis, title="Top 15 graczy — TOPSIS", filename="tab_top15_topsis",
+             highlight_col=0)
 """)
 
 # --- HELLWIG ---
@@ -600,8 +669,10 @@ code("""def ranking_hellwig(df, stimulants, destimulants):
     return result
 
 hellwig_df = ranking_hellwig(df, STIMULANTS, DESTIMULANTS)
-print("=== TOP 15 — HELLWIG ===")
-hellwig_df[["Player", "Pos", "Tm", "Hellwig_score", "Hellwig_rank"]].head(15)
+top15_hellwig = hellwig_df[["Player", "Pos", "Tm", "Hellwig_score", "Hellwig_rank"]].head(15).copy()
+top15_hellwig["Hellwig_score"] = top15_hellwig["Hellwig_score"].round(4)
+render_table(top15_hellwig, title="Top 15 graczy — Hellwig", filename="tab_top15_hellwig",
+             highlight_col=0)
 """)
 
 # ==========================================================================
@@ -629,18 +700,21 @@ merged = merged.merge(player_info, on="Player", how="left")
 
 # Srednia ranga
 rank_cols = ["SAW_rank", "TOPSIS_rank", "Hellwig_rank"]
-merged["Średnia_ranga"] = merged[rank_cols].mean(axis=1)
-merged = merged.sort_values("Średnia_ranga").reset_index(drop=True)
+merged["Srednia_ranga"] = merged[rank_cols].mean(axis=1)
+merged = merged.sort_values("Srednia_ranga").reset_index(drop=True)
 
 # Wyswietl top 20
 display_cols = ["Player", "Pos", "Tm",
                 "SAW_score", "SAW_rank",
                 "TOPSIS_score", "TOPSIS_rank",
                 "Hellwig_score", "Hellwig_rank",
-                "Średnia_ranga"]
+                "Srednia_ranga"]
 
-print("=== TOP 20 GRACZY wg średniej rangi ===\n")
-merged[display_cols].head(20)
+top20_cmp = merged[display_cols].head(20).copy()
+for c in ["SAW_score", "TOPSIS_score", "Hellwig_score", "Srednia_ranga"]:
+    top20_cmp[c] = top20_cmp[c].round(3)
+render_table(top20_cmp, title="Top 20 graczy wg sredniej rangi",
+             filename="tab_top20_combined", fontsize=8)
 """)
 
 # --- BARPLOTY ---
@@ -728,7 +802,7 @@ plt.show()
 # ==========================================================================
 md(r"""### 6.4. Zgodność rankingów — korelacja Spearmana i tau Kendalla""")
 
-code(r"""# Korelacja Spearmana
+code(r"""# Korelacja Spearmana i tau Kendalla
 method_names = ["SAW", "TOPSIS", "Hellwig"]
 rank_cols = [f"{m}_rank" for m in method_names]
 
@@ -744,11 +818,14 @@ for m1 in method_names:
         spearman_matrix.loc[m1, m2] = round(rho, 4)
         kendall_matrix.loc[m1, m2] = round(tau, 4)
 
-print("=== Macierz korelacji Spearmana ===")
-print(spearman_matrix.to_string())
-print()
-print("=== Macierz tau Kendalla ===")
-print(kendall_matrix.to_string())
+# Renderuj macierze jako tabele PNG
+spearman_tbl = spearman_matrix.reset_index().rename(columns={"index": "Metoda"})
+render_table(spearman_tbl, title="Macierz korelacji Spearmana",
+             filename="tab_spearman_matrix")
+
+kendall_tbl = kendall_matrix.reset_index().rename(columns={"index": "Metoda"})
+render_table(kendall_tbl, title="Macierz tau Kendalla",
+             filename="tab_kendall_matrix")
 """)
 
 code(r"""# Heatmapa korelacji Spearmana
@@ -814,12 +891,14 @@ md(r"""**Interpretacja zgodności rankingów:**
 md(r"""### 6.6. Analiza wybranych graczy — największe różnice między metodami""")
 
 code(r"""# Gracze z najwiekszymi roznami miedzy rankingami
-merged["Rozstęp_rang"] = merged[rank_cols].max(axis=1) - merged[rank_cols].min(axis=1)
+merged["Rozstep_rang"] = merged[rank_cols].max(axis=1) - merged[rank_cols].min(axis=1)
 
-print("=== Gracze z NAJWIĘKSZYMI różnicami pozycji między rankingami ===\n")
-biggest_diff = merged.nlargest(10, "Rozstęp_rang")
-biggest_diff[["Player", "Pos", "SAW_rank", "TOPSIS_rank", "Hellwig_rank",
-              "Średnia_ranga", "Rozstęp_rang"]]
+biggest_diff = merged.nlargest(10, "Rozstep_rang")
+diff_display = biggest_diff[["Player", "Pos", "SAW_rank", "TOPSIS_rank", "Hellwig_rank",
+                              "Srednia_ranga", "Rozstep_rang"]].copy()
+diff_display["Srednia_ranga"] = diff_display["Srednia_ranga"].round(1)
+render_table(diff_display, title="Gracze z najwiekszymi roznicami pozycji miedzy rankingami",
+             filename="tab_biggest_diff", highlight_col=6)
 """)
 
 code(r"""# Analiza profilu kluczowych graczy
@@ -832,23 +911,23 @@ available = df["Player"].tolist()
 matched = []
 for kp in key_players:
     for ap in available:
-        # Proste dopasowanie po poczatkowych literach
         if ap.startswith(kp[:5]) or kp.startswith(ap[:5]):
             matched.append(ap)
             break
 
-print("=== Profile statystyczne kluczowych graczy ===\n")
 mask = df["Player"].isin(matched)
 if mask.sum() > 0:
     profile = df.loc[mask, ["Player", "Pos"] + ALL_VARIABLES].copy()
-    profile = profile.set_index("Player")
-    display(profile)
 else:
-    # Fallback: top 10 z merged
     top10_names = merged.head(10)["Player"].tolist()
     profile = df[df["Player"].isin(top10_names)][["Player", "Pos"] + ALL_VARIABLES].copy()
-    profile = profile.set_index("Player")
-    display(profile)
+
+# Round numeric columns for readability
+for c in ALL_VARIABLES:
+    profile[c] = profile[c].round(3)
+
+render_table(profile, title="Profile statystyczne kluczowych graczy",
+             filename="tab_key_player_profiles", fontsize=8)
 """)
 
 md(r"""**Analiza wybranych przypadków:**
@@ -890,9 +969,182 @@ plt.show()
 """)
 
 # ==========================================================================
-# 7. ZAPIS WYNIKOW
+# 6.8 RANKING ZAGREGOWANY
 # ==========================================================================
-md(r"""### 6.8. Zapis wyników""")
+md(r"""### 6.8. Ranking zagregowany (średnia ważona trzech metod)
+
+Aby uzyskać jeden końcowy ranking, uśredniamy **znormalizowane score'y** trzech metod
+z równymi wagami (1/3 każda). Normalizacja min-max score'ów jest konieczna, ponieważ
+zakresy wartości różnią się między metodami (np. SAW ∈ [0.17, 0.74], Hellwig ∈ [-0.08, 0.44]).
+
+$$S_i^{AGR} = \frac{1}{3} \cdot \hat{S}_i^{SAW} + \frac{1}{3} \cdot \hat{S}_i^{TOPSIS} + \frac{1}{3} \cdot \hat{S}_i^{Hellwig}$$
+
+gdzie $\hat{S}_i^{(m)} = \frac{S_i^{(m)} - S_{min}^{(m)}}{S_{max}^{(m)} - S_{min}^{(m)}}$ — normalizacja min-max score'u metody $m$.
+""")
+
+code(r"""# Ranking zagregowany: srednia wazona 1/3 z trzech metod
+# Normalizacja min-max scorow (zakresy sa rozne miedzy metodami)
+for method in ["SAW", "TOPSIS", "Hellwig"]:
+    col = f"{method}_score"
+    s_min = merged[col].min()
+    s_max = merged[col].max()
+    merged[f"{method}_score_norm"] = (merged[col] - s_min) / (s_max - s_min)
+
+# Srednia wazona (1/3 kazda metoda)
+merged["AGR_score"] = (
+    (1/3) * merged["SAW_score_norm"] +
+    (1/3) * merged["TOPSIS_score_norm"] +
+    (1/3) * merged["Hellwig_score_norm"]
+)
+
+merged["AGR_rank"] = merged["AGR_score"].rank(ascending=False, method="min").astype(int)
+merged = merged.sort_values("AGR_rank").reset_index(drop=True)
+
+agr_cols = ["Player", "Pos", "Tm",
+            "SAW_rank", "TOPSIS_rank", "Hellwig_rank",
+            "AGR_score", "AGR_rank"]
+top20_agr_tbl = merged[agr_cols].head(20).copy()
+top20_agr_tbl["AGR_score"] = top20_agr_tbl["AGR_score"].round(3)
+render_table(top20_agr_tbl,
+             title="Top 20 — Ranking zagregowany\n(1/3 SAW + 1/3 TOPSIS + 1/3 Hellwig)",
+             filename="tab_top20_aggregated", highlight_col=7)
+""")
+
+code(r"""# Barplot top 20 zagregowany
+fig, ax = plt.subplots(figsize=(10, 10))
+top20_agr = merged.head(20).iloc[::-1]
+
+colors_agr = plt.cm.viridis(np.linspace(0.3, 0.9, 20))[::-1]
+bars = ax.barh(range(20), top20_agr["AGR_score"].values, color=colors_agr, alpha=0.9)
+ax.set_yticks(range(20))
+labels = [f"{row['Player']} ({row['Pos']})" for _, row in top20_agr.iterrows()]
+ax.set_yticklabels(labels, fontsize=9)
+ax.set_xlabel("Zagregowany score", fontsize=11)
+ax.set_title("Ranking zagregowany — Top 20 graczy NBA Playoffs 2023/24\n(1/3 SAW + 1/3 TOPSIS + 1/3 Hellwig)",
+             fontsize=13, fontweight="bold")
+
+# Dodaj rangi poszczegolnych metod jako adnotacje
+for i, (_, row) in enumerate(top20_agr.iterrows()):
+    ax.text(row["AGR_score"] + 0.005, i,
+            f"S:{int(row['SAW_rank'])} T:{int(row['TOPSIS_rank'])} H:{int(row['Hellwig_rank'])}",
+            va="center", fontsize=7, color="gray")
+
+fig.tight_layout()
+plt.show()
+""")
+
+code(r"""# Korelacja rankingu zagregowanego z poszczegolnymi metodami
+print("=== Korelacja Spearmana rankingu zagregowanego z poszczególnymi metodami ===\n")
+for method in ["SAW", "TOPSIS", "Hellwig"]:
+    rho, pval = sp_stats.spearmanr(merged["AGR_rank"], merged[f"{method}_rank"])
+    print(f"  AGR vs {method}: rho = {rho:.4f} (p = {pval:.2e})")
+""")
+
+md(r"""**Komentarz:** Ranking zagregowany łączy informację z trzech różnych perspektyw metodologicznych.
+Dzięki równym wagom (1/3) żadna metoda nie dominuje. Normalizacja min-max score'ów zapewnia,
+że każda metoda ma porównywalny wpływ na wynik końcowy niezależnie od zakresu wartości.
+""")
+
+# ==========================================================================
+# 6.9 RANKING PER POZYCJA
+# ==========================================================================
+md(r"""### 6.9. Ranking top graczy dla każdej pozycji
+
+Koszykówka NBA wyróżnia 5 pozycji o różnych rolach na parkiecie:
+- **PG** (Point Guard) — rozgrywający, kreator gry
+- **SG** (Shooting Guard) — rzucający obrońca
+- **SF** (Small Forward) — niski skrzydłowy
+- **PF** (Power Forward) — silny skrzydłowy
+- **C** (Center) — środkowy
+
+Poniżej przedstawiamy top 5 graczy na każdej pozycji wg rankingu zagregowanego.
+""")
+
+code(r"""# Top 5 graczy na kazda pozycje wg rankingu zagregowanego
+positions = ["PG", "SG", "SF", "PF", "C"]
+pos_names = {
+    "PG": "Point Guard (rozgrywajacy)",
+    "SG": "Shooting Guard (rzucajacy obronca)",
+    "SF": "Small Forward (niski skrzydlowy)",
+    "PF": "Power Forward (silny skrzydlowy)",
+    "C": "Center (srodkowy)",
+}
+
+pos_top5 = {}
+for pos in positions:
+    pos_df = merged[merged["Pos"] == pos].nsmallest(5, "AGR_rank")
+    pos_top5[pos] = pos_df
+    display_cols = ["Player", "Tm", "AGR_score", "AGR_rank",
+                    "SAW_rank", "TOPSIS_rank", "Hellwig_rank"]
+    tbl = pos_df[display_cols].copy()
+    tbl["AGR_score"] = tbl["AGR_score"].round(3)
+    render_table(tbl, title=f"Top 5 — {pos_names[pos]}",
+                 filename=f"tab_top5_{pos}")
+""")
+
+code(r"""# Wizualizacja: top 5 na kazda pozycje
+fig, axes = plt.subplots(1, 5, figsize=(24, 6), sharey=False)
+colors_pos = {"PG": "#4C72B0", "SG": "#DD8452", "SF": "#55A868", "PF": "#C44E52", "C": "#8172B3"}
+
+for idx, pos in enumerate(positions):
+    ax = axes[idx]
+    top5 = pos_top5[pos].iloc[::-1]  # odwroc dla barh
+
+    players = top5["Player"].values
+    scores = top5["AGR_score"].values
+    color = colors_pos[pos]
+
+    bars = ax.barh(range(len(players)), scores, color=color, alpha=0.85)
+    ax.set_yticks(range(len(players)))
+    # Skroc imiona: "Shai Gilgeous-Alexander" -> "S. Gilgeous-Alexander"
+    short_names = []
+    for p in players:
+        parts = p.split()
+        if len(parts) >= 2:
+            short_names.append(parts[0][0] + ". " + " ".join(parts[1:]))
+        else:
+            short_names.append(p)
+    ax.set_yticklabels(short_names, fontsize=9)
+    ax.set_xlabel("AGR score", fontsize=10)
+    ax.set_title(f"{pos}", fontsize=14, fontweight="bold", color=color)
+
+    # AGR rank jako adnotacja
+    for i, (_, row) in enumerate(top5.iterrows()):
+        ax.text(scores[i] + 0.005, i, f"#{int(row['AGR_rank'])}",
+                va="center", fontsize=8, fontweight="bold", color="gray")
+
+fig.suptitle("Top 5 graczy na każdej pozycji — ranking zagregowany",
+             fontsize=15, fontweight="bold")
+fig.tight_layout()
+plt.show()
+""")
+
+code(r"""# Tabela zbiorcza: top 5 per pozycja z kluczowymi statystykami
+for pos in positions:
+    top5_names = pos_top5[pos]["Player"].tolist()
+    pos_stats = df[df["Player"].isin(top5_names)][["Player", "Pos"] + ALL_VARIABLES].copy()
+    agr_info = merged[merged["Player"].isin(top5_names)][["Player", "AGR_rank"]].copy()
+    pos_stats = pos_stats.merge(agr_info, on="Player")
+    pos_stats = pos_stats.sort_values("AGR_rank")
+    for c in ALL_VARIABLES:
+        pos_stats[c] = pos_stats[c].round(3)
+    render_table(pos_stats, title=f"{pos} — statystyki top 5 graczy",
+                 filename=f"tab_top5_stats_{pos}", fontsize=8)
+""")
+
+md(r"""**Obserwacje z rankingu per pozycja:**
+
+- **PG:** Dominacja kreatorów gry — Shai Gilgeous-Alexander, LeBron James (klasyfikowany jako PF w danych, ale wielu PG jest w top ogólnym). Haliburton wyróżnia się na tle Brunson/Maxey dzięki lepszej efektywności (eFG%) i mniejszej liczbie strat.
+- **SG:** Anthony Edwards (#1 SG) to jedyny shooting guard w top 10 ogólnym — łączy scoring z obroną. Derrick White (#2 SG) to „rolnik" Celtics z wybitnymi statystykami defensywnymi.
+- **SF:** Najbardziej wyrównana pozycja — różnice między top 5 SF są mniejsze niż na innych pozycjach.
+- **PF:** LeBron James i Jayson Tatum to elitarni gracze z wszechstronnymi statystykami. Evan Mobley (#3 PF) wyróżnia się defensywnie.
+- **C:** Jokić i Anthony Davis — dwaj najlepsi centri w play-offach. Jarrett Allen (#3 C ogólnie, ale #1 Hellwig) reprezentuje „cichą efektywność".
+""")
+
+# ==========================================================================
+# 6.10 ZAPIS WYNIKOW
+# ==========================================================================
+md(r"""### 6.10. Zapis wyników""")
 
 code(r"""from pathlib import Path
 
@@ -903,6 +1155,14 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 saw_df.to_csv(OUTPUT_DIR / "ranking_saw.csv", index=False)
 topsis_df.to_csv(OUTPUT_DIR / "ranking_topsis.csv", index=False)
 hellwig_df.to_csv(OUTPUT_DIR / "ranking_hellwig.csv", index=False)
+
+# Zapis rankingu zagregowanego
+agr_save_cols = ["Player", "Pos", "Tm",
+                 "SAW_score", "SAW_rank",
+                 "TOPSIS_score", "TOPSIS_rank",
+                 "Hellwig_score", "Hellwig_rank",
+                 "AGR_score", "AGR_rank"]
+merged[agr_save_cols].to_csv(OUTPUT_DIR / "ranking_zagregowany.csv", index=False)
 
 # Zapis porównania
 merged.to_csv(OUTPUT_DIR / "ranking_comparison.csv", index=False)
@@ -921,8 +1181,14 @@ outliers_df.to_csv(OUTPUT_DIR / "outliers.csv", index=False)
 dataset_cols = ["Player", "Pos", "Tm", "G", "GS", "MP"] + ALL_VARIABLES
 df[dataset_cols].to_csv("nba_playoffs_2024_dataset.csv", index=False)
 
+# Zapis rankingu per pozycja
+for pos in positions:
+    top5_names = pos_top5[pos]["Player"].tolist()
+    pos_out = merged[merged["Player"].isin(top5_names)][agr_save_cols].sort_values("AGR_rank")
+    pos_out.to_csv(OUTPUT_DIR / f"ranking_top5_{pos}.csv", index=False)
+
 print("Wyniki zapisane do katalogu output/")
-print(f"Zbiór danych zapisany: nba_playoffs_2024_dataset.csv ({len(df)} graczy)")
+print(f"Zbior danych zapisany: nba_playoffs_2024_dataset.csv ({len(df)} graczy)")
 print(f"\nPliki:")
 for f in sorted(OUTPUT_DIR.iterdir()):
     if f.is_file():
@@ -940,20 +1206,26 @@ md(r"""## 7. Podsumowanie
 
 2. **Odmienność Hellwiga:** Metoda Hellwiga, nie stosując wag eksperckich, nagradza graczy o zbalansowanym profilu statystycznym. Jarrett Allen (#1 w Hellwigu) jest modelowym przykładem — równomiernie wysoki poziom we wszystkich zmiennych, ale brak dominacji w najbardziej „medialnych" statystykach (PTS, AST).
 
-3. **Top 3 wg średniej rangi:**
-   - **Nikola Jokić** (DEN, C) — #1 SAW, #1 TOPSIS, #4 Hellwig → średnia ranga 2,0
-   - **LeBron James** (LAL, PF) — #2 SAW, #2 TOPSIS, #3 Hellwig → średnia ranga 2,3
-   - **Shai Gilgeous-Alexander** (OKC, PG) — #5 SAW, #5 TOPSIS, #2 Hellwig → średnia ranga 4,0
+3. **Ranking zagregowany (1/3 SAW + 1/3 TOPSIS + 1/3 Hellwig):** Uśrednienie trzech metod z równymi wagami daje stabilny ranking końcowy. Top 3:
+   - **Nikola Jokić** (DEN, C) — dominuje w SAW i TOPSIS (#1), wysoko w Hellwigu (#4)
+   - **LeBron James** (LAL, PF) — konsekwentnie w top 3 we wszystkich metodach
+   - **Shai Gilgeous-Alexander** (OKC, PG) — #2 w Hellwigu dzięki zbalansowanemu profilowi
 
-4. **Wpływ wag:** Wagi eksperckie z dominacją PTS (0,25) i AST (0,18) premiują liderów ofensywnych. Obniżenie wagi destymulant (TOV = 0,05, PF = 0,05) oznacza, że gracze z wieloma stratami (Dončić, Embiid) nie są za to surowo karani w SAW/TOPSIS, ale są w Hellwigu.
+4. **Ranking per pozycja:** Analiza top 5 na każdej pozycji ujawnia różnice w rolach:
+   - Centri (C) dominują ogólny ranking dzięki zbiórkom i eFG%
+   - Rozgrywający (PG) wyróżniają się asystami, ale mają wyższe TOV
+   - Shooting guardowie (SG) mają najtrudniejszą drogę do czołówki — brak dominacji w żadnej kategorii
 
-5. **Obserwacje odstające:** Zidentyfikowano 11 obserwacji odstających (metoda IQR), ale zdecydowano o ich zachowaniu — w sporcie wartości skrajne reprezentują graczy elitarnych, a ich usunięcie zniekształciłoby ranking.
+5. **Wpływ wag:** Wagi eksperckie z dominacją PTS (0,25) i AST (0,18) premiują liderów ofensywnych. Obniżenie wagi destymulant (TOV = 0,05, PF = 0,05) oznacza, że gracze z wieloma stratami (Dončić, Embiid) nie są za to surowo karani w SAW/TOPSIS, ale są w Hellwigu.
+
+6. **Obserwacje odstające:** Zidentyfikowano 11 obserwacji odstających (metoda IQR), ale zdecydowano o ich zachowaniu — w sporcie wartości skrajne reprezentują graczy elitarnych, a ich usunięcie zniekształciłoby ranking.
 
 ### 7.2. Ograniczenia
 
 - Wagi eksperckie są subiektywne — inny ekspert mógłby przypisać inne wagi, zmieniając ranking SAW/TOPSIS.
 - Dane obejmują jedynie statystyki „pudełkowe" (*box score*) — nie uwzględniają zaawansowanych metryk (np. BPM, VORP, WS).
 - Filtracja (G ≥ 4, MP ≥ 15) eliminuje graczy z krótkim udziałem w play-offach, co może pominąć wartościowych rezerwowych.
+- Ranking zagregowany z równymi wagami (1/3) daje metodom ważonym (SAW, TOPSIS) łączny wpływ 2/3, co faworyzuje podejście eksperckie nad nieważoną metodą Hellwiga.
 
 ### 7.3. Dalsze kierunki badań
 
