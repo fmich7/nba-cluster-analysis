@@ -2,6 +2,9 @@
 
 Metody Analizy Danych — Projekt 1a (Porzadkowanie obiektow)
 
+##Dane
+https://pr.nba.com/voting-results-2023-24-nba-regular-season-awards/
+
 ## Opis
 
 Ranking graczy NBA Playoffs 2023/24 z wykorzystaniem trzech metod:
