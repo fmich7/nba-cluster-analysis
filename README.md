@@ -2,7 +2,7 @@
 
 Metody Analizy Danych — Projekt 1a (Porzadkowanie obiektow)
 
-Dane
+Dane:
 https://pr.nba.com/voting-results-2023-24-nba-regular-season-awards/
 
 ## Opis
