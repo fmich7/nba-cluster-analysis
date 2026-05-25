@@ -7803,7 +7803,7 @@ a.anchor-link {
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="Predykcja-Odej%C5%9B%C4%87-Klient%C3%B3w-Telco---Metody-Analizy-Danych-Projekt-2">Predykcja Odejść Klientów Telco - Metody Analizy Danych Projekt 2<a class="anchor-link" href="#Predykcja-Odej%C5%9B%C4%87-Klient%C3%B3w-Telco---Metody-Analizy-Danych-Projekt-2">¶</a></h1><p><strong>Autorzy:</strong> Filip Michalak, Jakub Michalski, Marek Najmóła<br/>
-<strong>Data:</strong> 23.05.2026</p>
+<strong>Data:</strong> 09.06.2026</p>
 <h2 id="Abstrakt">Abstrakt<a class="anchor-link" href="#Abstrakt">¶</a></h2><p>Celem niniejszej pracy jest predykcja odejść klientów firmy telekomunikacyjnej (Telco) przy użyciu czterech metod klasyfikacji: regresji logistycznej, drzewa decyzyjnego, lasu losowego oraz XGBoost, a także modelu hybrydowego. Analizę przeprowadzono na zbiorze 7043 klientów opisanych 21 zmiennymi. Wyniki wskazują na wysoką skuteczność regresji logistycznej (AUC = 0,842).</p>
 <p><strong>Słowa kluczowe:</strong> klasyfikacja, churn, regresja logistyczna, las losowy, XGBoost, Telco, model hybrydowy</p>
 </div>
@@ -7860,6 +7860,7 @@ a.anchor-link {
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
 <span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
 <span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
 <span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
@@ -7958,9 +7959,7 @@ dtype: int64
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">IPython.display</span> <span class="kn">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
-
-<span class="c1"># Tabela zmiennych</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Tabela zmiennych</span>
 <span class="n">var_desc</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">(</span><span class="s1">'customerID'</span><span class="p">,</span> <span class="s1">'object'</span><span class="p">,</span> <span class="s1">'ID klienta'</span><span class="p">),</span>
     <span class="p">(</span><span class="s1">'gender'</span><span class="p">,</span> <span class="s1">'object'</span><span class="p">,</span> <span class="s1">'Płeć (Male/Female)'</span><span class="p">),</span>
@@ -8690,10 +8689,35 @@ Liczba cech po encodingu: 30
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="3.1-Regresja-logistyczna">3.1 Regresja logistyczna<a class="anchor-link" href="#3.1-Regresja-logistyczna">¶</a></h3><p>Regresja logistyczna jest klasyczną metodą klasyfikacji binarnej. Metoda ta została szeroko opisana w pracy Hosmera, Lemeshowa i Sturdivanta. Modeluje prawdopodobieństwo przynależności do klasy przy użyciu funkcji logistycznej (sigmoid):</p>
-<p>$$P(Y=1|X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_1 + ... + \beta_n X_n)}}$$</p>
-<p>Jest interpretowalna (współczynniki jako log-odds) i stanowi bazę porównawczą dla bardziej złożonych metod. W pracy zastosowano regularyzację L2 (domyślną) z maksymalnie 1000 iteracjami.</p>
-<p><strong>Parametry:</strong> <code>max_iter=1000</code>, <code>random_state=42</code></p>
+<h3 id="3.1.-Regresja-logistyczna">3.1. Regresja logistyczna<a class="anchor-link" href="#3.1.-Regresja-logistyczna">¶</a></h3><p>Regresja logistyczna jest metodą klasyfikacji binarnej służącą do przewidywania prawdopodobieństwa przynależności obiektu do jednej z dwóch klas. Model wykorzystuje funkcję logistyczną (sigmoidalną), która przekształca liniową kombinację cech wejściowych do wartości z przedziału $[0,1]$.</p>
+<p>Krok 1 - Liniowa kombinacja cech:</p>
+<p>$$
+z = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots + \beta_n X_n
+$$</p>
+<p>gdzie:</p>
+<ul>
+<li>$X_1, X_2, ..., X_n$ - cechy wejściowe,</li>
+<li>$\beta_0$ - wyraz wolny modelu,</li>
+<li>$\beta_1, ..., \beta_n$ - współczynniki określające wpływ poszczególnych cech.</li>
+</ul>
+<p>Krok 2 - Zastosowanie funkcji logistycznej:</p>
+<p>$$
+P(Y=1|X) = \frac{1}{1 + e^{-z}}
+$$</p>
+<p>gdzie:</p>
+<ul>
+<li>$P(Y=1|X)$ - prawdopodobieństwo przynależności do klasy pozytywnej,</li>
+<li>$e$ - podstawa logarytmu naturalnego,</li>
+<li>$z$ - wartość obliczona w kroku 1.</li>
+</ul>
+<p>Krok 3 - Klasyfikacja obiektu:</p>
+<p>Jeżeli:</p>
+<p>$$
+P(Y=1|X) \geq 0.5
+$$</p>
+<p>to obiekt przypisywany jest do klasy 1, w przeciwnym przypadku do klasy 0.</p>
+<p>Model regresji logistycznej cechuje się dobrą interpretowalnością oraz niską złożonością obliczeniową. W pracy zastosowano regularyzację L2 oraz maksymalną liczbę iteracji równą 1000.</p>
+<p><strong>Parametry modelu:</strong> <code>max_iter=1000</code>, <code>random_state=42</code></p>
 </div>
 </div>
 </div>
@@ -8774,8 +8798,23 @@ Test AUC:      0.8422
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="3.2-Drzewo-decyzyjne">3.2 Drzewo decyzyjne<a class="anchor-link" href="#3.2-Drzewo-decyzyjne">¶</a></h3><p>Drzewo decyzyjne dzieli przestrzeń cech na regiony za pomocą sekwencji reguł if-then. Podstawy teoretyczne drzew decyzyjnych przedstawili Breiman i in.. Każdy węzeł wewnętrzny reprezentuje test na jednej cechy, a liście przypisują klasę lub prawdopodobieństwo. Jest interpretowalne (można wizualizować drzewo), ale podatne na przeuczenie.</p>
-<p><strong>Parametry:</strong> <code>max_depth=10</code>, <code>min_samples_split=20</code>, <code>min_samples_leaf=10</code></p>
+<h3 id="3.2.-Drzewo-decyzyjne">3.2. Drzewo decyzyjne<a class="anchor-link" href="#3.2.-Drzewo-decyzyjne">¶</a></h3><p>Drzewo decyzyjne jest metodą klasyfikacji i regresji polegającą na podziale przestrzeni cech na mniejsze regiony za pomocą sekwencji reguł decyzyjnych typu if-then. Model tworzy strukturę drzewa, w której każdy węzeł wewnętrzny reprezentuje test wykonywany na jednej z cech, natomiast liście drzewa zawierają końcową decyzję klasyfikacyjną lub przewidywaną wartość.</p>
+<p>Krok 1 - Wybór najlepszego podziału:</p>
+<p>Dla każdej cechy analizowane są możliwe punkty podziału danych. Algorytm wybiera taki podział, który maksymalnie zwiększa jednorodność klas w utworzonych podzbiorach.</p>
+<p>W pracy zastosowano indeks Giniego jako kryterium jakości podziału:</p>
+<p>$$
+Gini = 1 - \sum_{i=1}^{k} p_i^2
+$$</p>
+<p>gdzie:</p>
+<ul>
+<li>$p_i$ - prawdopodobieństwo przynależności obserwacji do klasy $i$,</li>
+<li>$k$ - liczba klas.</li>
+</ul>
+<p>Krok 2 - Rekurencyjny podział danych:</p>
+<p>Proces podziału jest powtarzany dla kolejnych węzłów aż do spełnienia warunków zatrzymania, np. osiągnięcia maksymalnej głębokości drzewa lub minimalnej liczby próbek w węźle.</p>
+<p>Drzewa decyzyjne cechują się wysoką interpretowalnością, ponieważ możliwa jest wizualizacja procesu podejmowania decyzji. Wadą tej metody jest jednak podatność na przeuczenie (overfitting), szczególnie dla bardzo głębokich drzew.</p>
+<p>W pracy zastosowano ograniczenie maksymalnej głębokości drzewa oraz minimalnej liczby próbek wymaganych do podziału i utworzenia liścia.</p>
+<p><strong>Parametry modelu:</strong> <code>max_depth=10</code>, <code>min_samples_split=20</code>, <code>min_samples_leaf=10</code>, <code>random_state=42</code></p>
 </div>
 </div>
 </div>
@@ -8784,7 +8823,7 @@ Test AUC:      0.8422
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [63]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">dt</span> <span class="o">=</span> <span class="n">DecisionTreeClassifier</span><span class="p">(</span><span class="n">max_depth</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">min_samples_split</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
@@ -8811,7 +8850,7 @@ Test AUC:      0.8422
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Test F1:       </span><span class="si">{</span><span class="n">dt_metrics</span><span class="p">[</span><span class="s1">'F1'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Test AUC:      </span><span class="si">{</span><span class="n">dt_metrics</span><span class="p">[</span><span class="s1">'AUC'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-<span class="c1"># Feature importance</span>
+<span class="c1"># Najważniejsze cechy</span>
 <span class="n">importances_dt</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">feature_importances_</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X_train</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"=== TOP 10 CECH (ważność) ==="</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">feat</span><span class="p">,</span> <span class="n">imp</span> <span class="ow">in</span> <span class="n">importances_dt</span><span class="o">.</span><span class="n">nlargest</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
