@@ -1,40 +1,55 @@
+from tkinter import ttk
+from tkinter import messagebox
 import generator_danych
 import plotly.express as px
 import pandas as pd
 import datetime
-def harmonogram(sesje, konflikty, sale,przerwy):
-    sesje.sort(reverse=True,key=lambda x: (x['rozmiar'],x['ilosc_konfliktow'], x['dlugosc']))
-    sale.sort(reverse=True,key=lambda x: x['rozmiar'])
-    sesje_wykres=[]
+import tkinter as tk
+from PIL import Image, ImageTk
+import os
+
+# Deklaracja zmiennych globalnych
+etykieta_z_wykresem = None
+etykieta_niewpisane = None
+
+def harmonogram(sesje, konflikty, sale, przerwy):
+    sesje.sort(reverse=True, key=lambda x: (x['rozmiar'], x['ilosc_konfliktow'], x['dlugosc']))
+    sale.sort(reverse=True, key=lambda x: x['rozmiar'])
+    sesje_wykres = []
+    niewpisane_sesje = []
+    
     for i in range(len(sesje)):
-        print(sesje[i]["nazwa"],sesje[i]["ilosc_konfliktow"],sesje[i]["rozmiar"])
+        print(sesje[i]["nazwa"], sesje[i]["ilosc_konfliktow"], sesje[i]["rozmiar"])
         wpisane = False
         for j in range(len(sale)):
-            if sale[j]["rozmiar"]>=sesje[i]["rozmiar"]:
+            if sale[j]["rozmiar"] >= sesje[i]["rozmiar"]:
                 for k in range(32):
                     if sale[j]["harmonogram"][k] is None:
-                        if k+sesje[i]["dlugosc"]//15<=32:
-                            for l1 in range(k,k+sesje[i]["dlugosc"]//15):
+                        if k + sesje[i]["dlugosc"] // 15 <= 32:
+                            for l1 in range(k, k + sesje[i]["dlugosc"] // 15):
                                 for konflikt in konflikty:
-                                    if konflikt[0]["nazwa"]==sesje[i]["nazwa"] and konflikt[1]["nazwa"]==sale[j]["harmonogram"][l1]:
+                                    if konflikt[0]["nazwa"] == sesje[i]["nazwa"] and konflikt[1]["nazwa"] == sale[j]["harmonogram"][l1]:
                                         break
-                            for l2 in range(k,k+sesje[i]["dlugosc"]//15):
+                            for l2 in range(k, k + sesje[i]["dlugosc"] // 15):
                                 sale[j]["harmonogram"][l2] = sesje[i]["nazwa"]
-                            for l3 in range(k+sesje[i]["dlugosc"]//15,k+(sesje[i]["dlugosc"]+przerwy)//15):
-                                    if l3<32:
-                                        sale[j]["harmonogram"][l3] = "przerwa"
-                            sesje_wykres.append(dict(Nazwa=sesje[i]["nazwa"],
-                                                    Sala=sale[j]["nazwa"], 
-                                                    Start= datetime.datetime(2025, 5, 31, 9, 0)+ datetime.timedelta(minutes=k*15), 
-                                                    Koniec= datetime.datetime(2025, 5, 31, 9, 0)+ datetime.timedelta(minutes=(k+sesje[i]["dlugosc"]//15)*15)))
+                            for l3 in range(k + sesje[i]["dlugosc"] // 15, k + (sesje[i]["dlugosc"] + przerwy) // 15):
+                                if l3 < 32:
+                                    sale[j]["harmonogram"][l3] = "przerwa"
+                            sesje_wykres.append(dict(
+                                Nazwa=sesje[i]["nazwa"],
+                                Sala=sale[j]["nazwa"], 
+                                Start=datetime.datetime(2025, 5, 31, 9, 0) + datetime.timedelta(minutes=k * 15), 
+                                Koniec=datetime.datetime(2025, 5, 31, 9, 0) + datetime.timedelta(minutes=(k + sesje[i]["dlugosc"] // 15) * 15)
+                            ))
                             wpisane = True
                             break
-            if wpisane==True:
+            if wpisane == True:
                 break
-        if wpisane==False:
-            print("nie można wpisać sesji ",sesje[i]["nazwa"],sesje[i]["ilosc_konfliktow"]," do żadnej sali")    
+        if wpisane == False:
+            niewpisane_sesje.append(sesje[i]["nazwa"])
+            
     df = pd.DataFrame(sesje_wykres)
-    wykres=px.timeline(
+    wykres = px.timeline(
         df,
         x_start="Start",
         x_end="Koniec",
@@ -49,11 +64,111 @@ def harmonogram(sesje, konflikty, sale,przerwy):
         dtick=1800000
     )
     wykres.update_traces(textposition='inside', insidetextanchor='middle')
-    wykres.show()
-    print(sale[0]["harmonogram"],sale[0]["rozmiar"])
-    print("\n")
-    print(sale[1]["harmonogram"],sale[1]["rozmiar"])
-    print("\n")
-    print(sale[2]["harmonogram"],sale[2]["rozmiar"])
-sesje, konflikty,sale = generator_danych.generuj_dane_konferencji(liczba_sesji=20, szansa_na_konflikt=0.2, mindlugosc=30, maxdlugosc=90, ilosc_sali=3)
-harmonogram(sesje, konflikty, sale, przerwy=15)
+    # Zapis wykresu do pliku
+    wykres.write_image("tymczasowy_harmonogram.png", width=1200, height=600)
+    
+    return niewpisane_sesje
+
+
+def pokaz_harmonogram(niewpisane_sesje):
+    global etykieta_z_wykresem, etykieta_niewpisane
+    
+    # Ukrywamy formularz
+    label2.pack_forget()
+    form_frame.pack_forget()
+    button.pack_forget()
+    
+    # Wczytujemy świeżo wygenerowany obraz
+    obraz = Image.open("tymczasowy_harmonogram.png")
+    zdjecie = ImageTk.PhotoImage(obraz)
+
+    # Aktualizacja lub stworzenie etykiety z wykresem
+    if etykieta_z_wykresem is None:
+        etykieta_z_wykresem = tk.Label(root, image=zdjecie)
+    etykieta_z_wykresem.configure(image=zdjecie)
+    etykieta_z_wykresem.image = zdjecie
+    etykieta_z_wykresem.pack(pady=20)
+    
+    # Obsługa komunikatu o niewpisanych sesjach
+    if len(niewpisane_sesje) > 0:
+        tekst_odrzuconych = "Nie udało się przypisać do żadnej sali:\n" + "\n".join(niewpisane_sesje)
+        kolor_tekstu = "red"
+
+    if etykieta_niewpisane is None:
+        etykieta_niewpisane = tk.Label(root, text=tekst_odrzuconych, font=("Arial", 12, "bold"), fg=kolor_tekstu, bg="#f4f4f4")
+    else:
+        etykieta_niewpisane.configure(text=tekst_odrzuconych, fg=kolor_tekstu)
+    etykieta_niewpisane.pack(pady=5)
+
+
+def sterownik_przycisku(a, b, c, d, e): 
+    sesje, konflikty, sale = generator_danych.generuj_dane_konferencji(a, b, c, d, e)
+    niewpisane_sesje = harmonogram(sesje, konflikty, sale, przerwy=15)
+    pokaz_harmonogram(niewpisane_sesje)
+
+def pobranie_danych():
+    try:
+        a = int(entry3.get())
+        b = float(entry4.get())
+        c = int(entry5.get())
+        d = int(entry6.get())
+        e = int(entry7.get())
+        sterownik_przycisku(a, b, c, d, e)
+    except ValueError:
+        messagebox.showerror("Błąd", "Proszę wprowadzić poprawne dane.")
+
+# Konfiguracja okna głównego Tkinter
+root = tk.Tk()
+root.title("Generator Harmonogramu Konferencji")
+root.geometry("1280x1000")
+root.configure(bg="#f4f4f4")
+
+style = ttk.Style()
+if 'clam' in style.theme_names():
+    style.theme_use('clam')
+
+style.configure("TButton", font=("Arial", 14, "bold"), padding=10)
+
+# Budowa widoku wprowadzania danych
+label = tk.Label(root, text="Generator Harmonogramu Konferencji", font=("Arial", 20, "bold"), bg="#f4f4f4")
+label.pack(side="top", pady=(30, 10))
+
+label2 = tk.Label(root, text="Podaj parametry konferencji:", font=("Arial", 16), bg="#f4f4f4")
+label2.pack(side="top", pady=(0, 20))
+
+form_frame = tk.Frame(root, bg="#f4f4f4")
+form_frame.pack(side="top")
+
+font_label = ("Arial", 12)
+font_entry = ("Arial", 12)
+
+label3 = tk.Label(form_frame, text="Liczba sesji:", font=font_label, bg="#f4f4f4")
+label3.grid(row=0, column=0, sticky="e", padx=10, pady=10)
+entry3 = ttk.Entry(form_frame, font=font_entry, width=20)
+entry3.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+label4 = tk.Label(form_frame, text="Szansa na konflikt (0-1):", font=font_label, bg="#f4f4f4")
+label4.grid(row=1, column=0, sticky="e", padx=10, pady=10)
+entry4 = ttk.Entry(form_frame, font=font_entry, width=20)
+entry4.grid(row=1, column=1, sticky="w", padx=10, pady=10)
+
+label5 = tk.Label(form_frame, text="Minimalna długość (min):", font=font_label, bg="#f4f4f4")
+label5.grid(row=2, column=0, sticky="e", padx=10, pady=10)
+entry5 = ttk.Entry(form_frame, font=font_entry, width=20)
+entry5.grid(row=2, column=1, sticky="w", padx=10, pady=10)
+
+label6 = tk.Label(form_frame, text="Maksymalna długość (min):", font=font_label, bg="#f4f4f4")
+label6.grid(row=3, column=0, sticky="e", padx=10, pady=10)
+entry6 = ttk.Entry(form_frame, font=font_entry, width=20)
+entry6.grid(row=3, column=1, sticky="w", padx=10, pady=10)
+
+label7 = tk.Label(form_frame, text="Liczba sali:", font=font_label, bg="#f4f4f4")
+label7.grid(row=4, column=0, sticky="e", padx=10, pady=10)
+entry7 = ttk.Entry(form_frame, font=font_entry, width=20)
+entry7.grid(row=4, column=1, sticky="w", padx=10, pady=10)
+
+button = ttk.Button(root, text="Generuj Harmonogram", command=pobranie_danych)
+button.pack(side="top", pady=40)
+
+# Uruchomienie aplikacji
+root.mainloop()
