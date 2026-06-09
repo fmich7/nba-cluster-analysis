@@ -38,14 +38,18 @@ def generuj_dane_konferencji(liczba_sesji, szansa_na_konflikt,mindlugosc,maxdlug
     for i in range(liczba_sesji):
         for j in range(i + 1, liczba_sesji):
             if random.random() < szansa_na_konflikt:
-                konflikty.append((sesje[i], sesje[j]))
+                konflikty.append((sesje[i]["nazwa"], sesje[j]["nazwa"]))
                 sesje[i]["ilosc_konfliktow"] += 1
                 sesje[j]["ilosc_konfliktow"] += 1
 
     return sesje, konflikty,sale
 
-
-# sesje, konflikty,sale = generuj_dane_konferencji(liczba_sesji=8, szansa_na_konflikt=0.3, mindlugosc=15, maxdlugosc=120, ilosc_sali=3)
+# a=open("dane_konferencji.txt", "w")
+# sesje, konflikty, sale = generuj_dane_konferencji(liczba_sesji=23, szansa_na_konflikt=0.1, mindlugosc=30, maxdlugosc=90, ilosc_sali=3)
+# a.write(str(sesje)+"\n")
+# a.write(str(konflikty)+"\n")
+# a.write(str(sale)+"\n")
+# a.close()
 
 # Wypisanie wyniku w postaci zwykłego tekstu
 # print("--- DANE WEJŚCIOWE KONFERENCJI ---")
