@@ -1,0 +1,21 @@
+--- SESJE ---
+# Każda linia: nazwa;czas_trwania_w_minutach;rozmiar_sali
+S1;30;100
+S2;90;150
+S3;60;50
+S4;45;100
+S5;75;150
+S6;75;150
+S7;75;150
+
+--- KONFLIKTY ---
+# Każda linia: nazwa_sesji1;nazwa_sesji2
+S1;S2
+S2;S3
+S2;S4
+S3;S5
+
+--- SALE ---
+# Każda linia: nazwa_sali;rozmiar_sali
+Sala1;100
+Sala2;150
