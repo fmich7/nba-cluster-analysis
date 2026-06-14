@@ -1,4 +1,0 @@
-regresja logistyczna
-drzewo decyzyjne
-las losowy
-xg boost
