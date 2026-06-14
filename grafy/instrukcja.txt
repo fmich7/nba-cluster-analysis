@@ -1,5 +1,5 @@
 Temat projektu:
-29.Opracować i zaimplementować algorytm do zaplanowania konferencji tak, by
+29. Opracować i zaimplementować algorytm do zaplanowania konferencji tak, by
 niektóre sesje nie odbywały się w tym samym czasie.
 
 Jak działa Algorytm?
@@ -8,26 +8,66 @@ Program wykorzystuje zmodyfikowany algorytm Welsha-Powella. Najpierw sortuje wys
 Przyjmowane dane wejściowe:
 
 Liczba sesji: Liczba całkowita (np. 20).
-Szansa na konflikt: Ułamek dziesiętny w przedziale 0-1 (np. 0.1).
-Minimalna długość (min): Liczba całkowita (lidzba bedzię zaokrąglona w dół do wielokrotności 15) 
-Maksymalna długość (min): Liczba całkowita (lidzba bedzię zaokrąglona w dół do wielokrotności 15) 
+Szansa na konflikt:
+    - Ułamek dziesiętny w przedziale 0-1 (np. 0.1).
+    - WAŻNE! '.', a nie ',' dla ułamku.
+Minimalna długość (min): Liczba całkowita (liczba będzie zaokrąglona w dół do wielokrotności 15)
+Maksymalna długość (min): Liczba całkowita (liczba będzie zaokrąglona w dół do wielokrotności 15)
 Liczba sali: Liczba całkowita (np. 3).
 
+Format pliku danych:
+
+Program wczytuje plik txt w formacie sekcji oddzielonych nagłówkami.
+
+Sekcja sesji:
+--- SESJE ---
+Każda linia: nazwa;czas_trwania_w_minutach;rozmiar_sali
+Przykład: S1;30;100
+
+Sekcja konfliktów:
+--- KONFLIKTY ---
+Każda linia: nazwa_sesji1;nazwa_sesji2
+Przykład: S1;S2
+
+Sekcja sal:
+--- SALE ---
+Każda linia: nazwa_sali;rozmiar_sali
+Przykład: Sala1;100
+
+Uwagi:
+- Linie zaczynające się od # są pomijane (komentarze).
+- Linie puste są pomijane.
+- Kolejność wierszy w sekcjach nie ma znaczenia.
+- Liczba konfliktów sesji jest obliczana automatycznie z listy konfliktów.
+
+Przykład pliku danych (patrz: przyklad.txt):
+
+--- SESJE ---
+# Każda linia: nazwa;czas_trwania_w_minutach;rozmiar_sali
+S1;30;100
+S2;90;150
+S3;60;50
+S4;45;100
+S5;75;150
+S6;75;150
+S7;75;150
+
+--- KONFLIKTY ---
+# Każda linia: nazwa_sesji1;nazwa_sesji2
+S1;S2
+S2;S3
+S2;S4
+S3;S5
+
+--- SALE ---
+# Każda linia: nazwa_sali;rozmiar_sali
+Sala1;100
+Sala2;150
+
 Instrukcja obsługi:
-
-Uruchom program.
-Wypełnij formularz zgodnie z powyższymi formatami.
-Kliknij "Generuj Harmonogram".
-lub wklej sciezke do pliku txt zawierajacego dane a nastepnie kliknig "Generuj Harmonogram"
-Na ekranie pojawi się wykres. Pod nim na czerwono wypiszą się sesje, dla których z powodu konfliktów lub braku sal zabrakło miejsca.
-
-przykladowy plik z danymi:
-[{'nazwa': 'S1', 'dlugosc': 30, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S2', 'dlugosc': 120, 'rozmiar': 50, 'ilosc_konfliktow': 3}, {'nazwa': 'S3', 'dlugosc': 105, 'rozmiar': 50, 'ilosc_konfliktow': 1}, {'nazwa': 'S4', 'dlugosc': 75, 'rozmiar': 100, 'ilosc_konfliktow': 3}, {'nazwa': 'S5', 'dlugosc': 45, 'rozmiar': 100, 'ilosc_konfliktow': 2}, {'nazwa': 'S6', 'dlugosc': 15, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S7', 'dlugosc': 120, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S8', 'dlugosc': 60, 'rozmiar': 50, 'ilosc_konfliktow': 4}]
-[('S1', 'S2'), ('S2', 'S4'), ('S2', 'S8'), ('S3', 'S8'), ('S4', 'S5'), ('S4', 'S8'), ('S5', 'S6'), ('S7', 'S8')]
-[{'nazwa': 'Sala1', 'rozmiar': 50, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}, {'nazwa': 'Sala2', 'rozmiar': 100, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}, {'nazwa': 'Sala3', 'rozmiar': 50, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}]
-
-Plik2:
-[{'nazwa': 'S1', 'dlugosc': 30, 'rozmiar': 100, 'ilosc_konfliktow': 3}, {'nazwa': 'S2', 'dlugosc': 90, 'rozmiar': 150, 'ilosc_konfliktow': 2}, {'nazwa': 'S3', 'dlugosc': 90, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S4', 'dlugosc': 30, 'rozmiar': 50, 'ilosc_konfliktow': 2}, {'nazwa': 'S5', 'dlugosc': 75, 'rozmiar': 150, 'ilosc_konfliktow': 3}, {'nazwa': 'S6', 'dlugosc': 90, 'rozmiar': 50, 'ilosc_konfliktow': 6}, {'nazwa': 'S7', 'dlugosc': 60, 'rozmiar': 150, 'ilosc_konfliktow': 2}, {'nazwa': 'S8', 'dlugosc': 60, 'rozmiar': 100, 'ilosc_konfliktow': 0}, {'nazwa': 'S9', 'dlugosc': 60, 'rozmiar': 100, 'ilosc_konfliktow': 0}, {'nazwa': 'S10', 'dlugosc': 45, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S11', 'dlugosc': 90, 'rozmiar': 100, 'ilosc_konfliktow': 0}, {'nazwa': 'S12', 'dlugosc': 60, 'rozmiar': 150, 'ilosc_konfliktow': 3}, {'nazwa': 'S13', 'dlugosc': 45, 'rozmiar': 100, 'ilosc_konfliktow': 1}, {'nazwa': 'S14', 'dlugosc': 45, 'rozmiar': 150, 'ilosc_konfliktow': 4}, {'nazwa': 'S15', 'dlugosc': 75, 'rozmiar': 100, 'ilosc_konfliktow': 2}, {'nazwa': 'S16', 'dlugosc': 30, 'rozmiar': 150, 'ilosc_konfliktow': 2}, {'nazwa': 'S17', 'dlugosc': 90, 'rozmiar': 50, 'ilosc_konfliktow': 2}, {'nazwa': 'S18', 'dlugosc': 60, 'rozmiar': 100, 'ilosc_konfliktow': 0}, {'nazwa': 'S19', 'dlugosc': 75, 'rozmiar': 50, 'ilosc_konfliktow': 4}, {'nazwa': 'S20', 'dlugosc': 45, 'rozmiar': 50, 'ilosc_konfliktow': 1}, {'nazwa': 'S21', 'dlugosc': 75, 'rozmiar': 50, 'ilosc_konfliktow': 2}, {'nazwa': 'S22', 'dlugosc': 45, 'rozmiar': 150, 'ilosc_konfliktow': 2}, {'nazwa': 'S23', 'dlugosc': 75, 'rozmiar': 50, 'ilosc_konfliktow': 1}]
-[('S1', 'S6'), ('S1', 'S10'), ('S1', 'S13'), ('S2', 'S14'), ('S2', 'S17'), ('S3', 'S5'), ('S4', 'S6'), ('S4', 'S14'), ('S5', 'S19'), ('S5', 'S23'), ('S6', 'S7'), ('S6', 'S14'), ('S6', 'S19'), ('S6', 'S21'), ('S7', 'S16'), ('S12', 'S14'), ('S12', 'S15'), ('S12', 'S22'), ('S15', 'S22'), ('S16', 'S19'), ('S17', 'S20'), ('S19', 'S21')]
-[{'nazwa': 'Sala1', 'rozmiar': 100, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}, {'nazwa': 'Sala2', 'rozmiar': 150, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}, {'nazwa': 'Sala3', 'rozmiar': 50, 'harmonogram': [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]}]
-
+1. Uruchom program.
+2. Wybierz jedną z metod generowania harmonogramu:
+    - Ręczne wypełnianie danych: Wypełnij formularz zgodnie z powyższymi formatami.
+    - Kliknij przycisk "Wybierz plik...", i wybierz plik który zawiera dane do program zgodne z powyższym przykładem.
+3. Kliknij "Generuj Harmonogram".
+4. Na ekranie pojawi się wykres. Pod nim na czerwono wypiszą się sesje, dla których z powodu konfliktów lub braku sal zabrakło miejsca.

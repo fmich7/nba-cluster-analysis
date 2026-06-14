@@ -163,10 +163,54 @@ def pobranie_danych():
             try:
                 with open(selected_file_path, 'r') as plik:
                     linie = plik.readlines()
-                    sesje = eval(linie[0].strip())
-                    konflikty = eval(linie[1].strip())
-                    sale = eval(linie[2].strip())
-                    flaga = 1
+
+                sekcja = None
+                sesje_raw = []
+                konflikty_raw = []
+                sale_raw = []
+
+                for linia in linie:
+                    linia = linia.strip()
+                    if not linia or linia.startswith('#'):
+                        continue
+                    if linia == '--- SESJE ---':
+                        sekcja = 'sesje'
+                        continue
+                    elif linia == '--- KONFLIKTY ---':
+                        sekcja = 'konflikty'
+                        continue
+                    elif linia == '--- SALE ---':
+                        sekcja = 'sale'
+                        continue
+
+                    if sekcja == 'sesje':
+                        czesci = linia.split(';')
+                        sesje_raw.append({
+                            'nazwa': czesci[0],
+                            'dlugosc': int(czesci[1]),
+                            'rozmiar': int(czesci[2]),
+                            'ilosc_konfliktow': 0
+                        })
+                    elif sekcja == 'konflikty':
+                        czesci = linia.split(';')
+                        konflikty_raw.append((czesci[0], czesci[1]))
+                    elif sekcja == 'sale':
+                        czesci = linia.split(';')
+                        sale_raw.append({
+                            'nazwa': czesci[0],
+                            'rozmiar': int(czesci[1]),
+                            'harmonogram': [None] * 32
+                        })
+
+                for k in konflikty_raw:
+                    for s in sesje_raw:
+                        if s['nazwa'] in k:
+                            s['ilosc_konfliktow'] += 1
+
+                sesje = sesje_raw
+                konflikty = konflikty_raw
+                sale = sale_raw
+                flaga = 1
             except Exception as ex:
                 logging.exception("Błąd podczas wczytywania pliku danych")
                 set_status_message("Błąd odczytu pliku danych. Sprawdź konsolę.")
