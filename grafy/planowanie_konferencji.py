@@ -8,11 +8,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os
 import logging
-import sys
-import traceback
 
-# Configure logging to stdout for easy console debugging
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
 # Deklaracja zmiennych globalnych
 etykieta_z_wykresem = None
@@ -32,10 +28,9 @@ def harmonogram(sesje, konflikty, sale, przerwy):
     sesje.sort(reverse=True, key=lambda x: (x['rozmiar'], x['ilosc_konfliktow'], x['dlugosc']))
     sale.sort(reverse=True, key=lambda x: x['rozmiar'])
     sesje_wykres = []
-    niewpisane_sesje = []
-    
+    niewpisane_sesje = [] 
+
     for i in range(len(sesje)):
-        print(sesje[i]["nazwa"], sesje[i]["ilosc_konfliktow"], sesje[i]["rozmiar"])
         wpisane = False
         for j in range(len(sale)):
             if sale[j]["rozmiar"] >= sesje[i]["rozmiar"]:
@@ -44,23 +39,31 @@ def harmonogram(sesje, konflikty, sale, przerwy):
                         if k + sesje[i]["dlugosc"] // 15 <= 32:
                             conflict_found = False
                             for l1 in range(k, k + sesje[i]["dlugosc"] // 15):
-                                scheduled_name = sale[j]["harmonogram"][l1]
-                                if scheduled_name is None:
-                                    continue
-                                for konflikt in konflikty:
-                                    if (konflikt[0] == sesje[i]["nazwa"] and konflikt[1] == scheduled_name) or \
-                                       (konflikt[1] == sesje[i]["nazwa"] and konflikt[0] == scheduled_name):
-                                        conflict_found = True
+                                for s in range(len(sale)):
+                                    scheduled_name = sale[s]["harmonogram"][l1]
+                                    if scheduled_name is None:
+                                        continue
+                                    for konflikt in konflikty:
+                                        if (konflikt[0] == sesje[i]["nazwa"] and konflikt[1] == scheduled_name) or \
+                                            (konflikt[1] == sesje[i]["nazwa"] and konflikt[0] == scheduled_name) or \
+                                            (sale[s]["nazwa"]==sale[j]["nazwa"]) or \
+                                            (scheduled_name == "przerwa" and sale[s]["nazwa"]==sale[j]["nazwa"]):
+                                            conflict_found = True
+                                            break
+                                    if conflict_found:
                                         break
-                                if conflict_found:
-                                    break
                             if conflict_found:
                                 continue
+                            for l4 in range((k - (przerwy // 15)), k ):
+                                print (l4)
+                                if l4 >= 0:
+                                    sale[j]["harmonogram"][l4] = "przerwa"
                             for l2 in range(k, k + sesje[i]["dlugosc"] // 15):
                                 sale[j]["harmonogram"][l2] = sesje[i]["nazwa"]
-                            for l3 in range(k + sesje[i]["dlugosc"] // 15, k + (sesje[i]["dlugosc"] + przerwy) // 15):
+                            for l3 in range((k + sesje[i]["dlugosc"] // 15), k + (sesje[i]["dlugosc"] + przerwy) // 15):
                                 if l3 < 32:
                                     sale[j]["harmonogram"][l3] = "przerwa"
+                            
                             sesje_wykres.append(dict(
                                 Nazwa=sesje[i]["nazwa"],
                                 Sala=sale[j]["nazwa"], 
