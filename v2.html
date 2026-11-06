@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jak działa system zadań — wersja wizualna</title>
+<style>
+  :root{
+    --bg:#f5f5fb;
+    --card:#ffffff;
+    --ink:#161a2c;
+    --muted:#5c6479;
+    --line:#e4e7f1;
+    --violet:#5b4bf5;
+    --violet-dark:#3d31c9;
+    --violet-soft:#ecebff;
+    --amber:#e08a00;
+    --amber-soft:#fff3da;
+    --green:#12925a;
+    --green-soft:#e4f7ed;
+    --red:#d92d5c;
+    --red-soft:#fde8ee;
+    --slate-soft:#eef1f7;
+    --radius:20px;
+    --shadow:0 2px 4px rgba(20,24,40,.04), 0 14px 34px rgba(20,24,40,.07);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{line-height:1.22;margin:0 0 .5em;letter-spacing:-.015em}
+  h1{font-size:clamp(2rem,4.6vw,3.4rem);font-weight:800}
+  h2{font-size:clamp(1.55rem,2.8vw,2.15rem);font-weight:800}
+  h3{font-size:1.12rem;font-weight:700}
+  p{margin:.55em 0 1em}
+  ul{margin:.4em 0 1em;padding-left:1.2em}
+  li{margin:.3em 0}
+  a{color:var(--violet);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:#eceff7;padding:.12em .4em;border-radius:6px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 1.25rem}
+
+  /* ---------- pasek postępu ---------- */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--violet),#a78bfa);z-index:80}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;color:#fff;
+    background:radial-gradient(1200px 500px at 80% -10%,#7c5cff 0%,transparent 60%),
+               radial-gradient(900px 500px at 0% 110%,#2b3a8f 0%,transparent 55%),
+               linear-gradient(150deg,#14162b 0%,#221d52 55%,#3b2a86 100%);
+    padding:clamp(1.4rem,4vw,2.4rem) 1.25rem clamp(2.6rem,6vw,4.2rem);
+  }
+  .hero::after{
+    content:"";position:absolute;inset:auto -10% -55% -10%;height:60%;
+    background:radial-gradient(closest-side,rgba(124,92,255,.35),transparent);
+    filter:blur(30px);pointer-events:none
+  }
+  .hero-inner{max-width:1120px;margin:0 auto;position:relative;z-index:1}
+  .hero-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:2.2rem}
+  .brand{display:flex;align-items:center;gap:.55rem;font-weight:700;font-size:.9rem;color:#d7d9f5}
+  .brand .dot{width:.7rem;height:.7rem;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#5b4bf5);box-shadow:0 0 0 4px rgba(167,139,250,.18)}
+  .version-switch{
+    display:inline-flex;gap:.2rem;padding:.22rem;border-radius:999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)
+  }
+  .version-switch a{font-size:.78rem;padding:.34rem .8rem;border-radius:999px;color:#c9cdf0;white-space:nowrap}
+  .version-switch a:hover{color:#fff;text-decoration:none;background:rgba(255,255,255,.12)}
+  .version-switch a.active{background:#fff;color:#1a1f36;font-weight:700}
+  .version-switch a.active:hover{background:#fff;color:#1a1f36}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:.45rem;font-size:.75rem;letter-spacing:.12em;
+    text-transform:uppercase;color:#cdc9ff;border:1px solid rgba(255,255,255,.22);
+    padding:.3rem .75rem;border-radius:999px;margin-bottom:1.1rem
+  }
+  .hero h1{max-width:19ch;margin-bottom:.6rem}
+  .hero h1 em{font-style:normal;background:linear-gradient(90deg,#c4b5fd,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{font-size:1.12rem;color:#dcdcf3;max-width:62ch;margin-bottom:1.6rem}
+  .hero-facts{display:flex;flex-wrap:wrap;gap:.6rem}
+  .fact{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:14px;padding:.55rem .9rem;font-size:.86rem;color:#e6e6ff
+  }
+  .fact b{color:#fff}
+
+  /* ---------- mininav ---------- */
+  .mininav{
+    position:sticky;top:0;z-index:60;
+    background:rgba(250,250,255,.88);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line)
+  }
+  .mininav-scroll{
+    display:flex;gap:.25rem;overflow-x:auto;max-width:1120px;margin:0 auto;
+    padding:.55rem 1rem;scrollbar-width:none
+  }
+  .mininav-scroll::-webkit-scrollbar{display:none}
+  .mininav a{
+    flex:0 0 auto;font-size:.8rem;font-weight:600;color:var(--muted);
+    padding:.32rem .65rem;border-radius:999px;white-space:nowrap
+  }
+  .mininav a:hover{background:#ececf7;text-decoration:none;color:var(--ink)}
+  .mininav a.active{background:var(--violet);color:#fff}
+
+  /* ---------- sekcje ---------- */
+  main{padding:1.6rem 0 4rem}
+  section{padding:2.6rem 0 .6rem;scroll-margin-top:64px}
+  .kicker{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--violet);font-weight:800;margin-bottom:.35rem}
+  .section-head{max-width:70ch;margin-bottom:1.5rem}
+  .section-head p{color:var(--muted);margin-bottom:0}
+  .lead{font-size:1.08rem}
+  .muted{color:var(--muted)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem 1.4rem;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:1rem}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+
+  .note{border-radius:16px;padding:1rem 1.15rem;margin:1.2rem 0;border:1px solid var(--line);background:var(--card)}
+  .note.violet{background:var(--violet-soft);border-color:#d9d5ff}
+  .note.amber{background:var(--amber-soft);border-color:#f5d9a4}
+  .note.green{background:var(--green-soft);border-color:#bfe9d2}
+  .note.red{background:var(--red-soft);border-color:#f6c9d7}
+  .note p:last-child{margin-bottom:0}
+  .note .nlabel{display:block;font-size:.72rem;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:.25rem}
+
+  .pill{display:inline-flex;align-items:center;gap:.35rem;font-size:.76rem;font-weight:700;padding:.2rem .6rem;border-radius:999px;white-space:nowrap}
+  .pill.pending{background:var(--slate-soft);color:#475069}
+  .pill.processing{background:var(--amber-soft);color:#8a5300}
+  .pill.completed{background:var(--green-soft);color:#0b7a45}
+  .pill.failed{background:var(--red-soft);color:#a51d42}
+  .pill.violet{background:var(--violet-soft);color:var(--violet-dark)}
+
+  /* ---------- 1. w 30 sekund ---------- */
+  .big-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .big-step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.5rem 1.3rem;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .big-step::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--violet),#a78bfa)}
+  .bignum{font-size:2.1rem;font-weight:800;color:var(--violet);line-height:1;margin-bottom:.6rem;letter-spacing:-.03em}
+  .big-step h3{margin-bottom:.25rem}
+  .big-step p{color:var(--muted);font-size:.95rem;margin:0}
+  .one-liner{
+    margin-top:1rem;background:linear-gradient(120deg,#1d1b3d,#332a6e);color:#ecebff;
+    border-radius:var(--radius);padding:1.2rem 1.4rem;font-size:1.05rem
+  }
+  .one-liner b{color:#fff}
+
+  /* ---------- 2. restauracja ---------- */
+  .flow{display:flex;align-items:stretch;gap:.5rem;margin:1.2rem 0 .4rem}
+  .station{flex:1;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:1rem;box-shadow:var(--shadow);text-align:center}
+  .station .emoji{font-size:1.9rem;line-height:1;display:block;margin-bottom:.45rem}
+  .station b{display:block;font-size:.95rem}
+  .station span{display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem}
+  .flow-arrow{align-self:center;color:#b9bfd4;font-size:1.3rem;flex:0 0 auto}
+  .legend{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:.8rem}
+  .legend span{display:inline-flex;align-items:center;gap:.4rem}
+  .legend i{width:.65rem;height:.65rem;border-radius:3px;display:inline-block}
+
+  /* ---------- 3. podróż ---------- */
+  .journey-diagram{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:1rem 0 1.4rem}
+  .jnode{
+    display:flex;align-items:center;gap:.5rem;background:#f2f3fa;border:1.5px solid transparent;
+    border-radius:999px;padding:.45rem .9rem;font-size:.85rem;font-weight:700;color:#596078;
+    transition:all .25s ease
+  }
+  .jnode .jdot{width:.55rem;height:.55rem;border-radius:50%;background:#c3c8da;transition:all .25s}
+  .jnode.on{background:var(--violet);border-color:var(--violet-dark);color:#fff;box-shadow:0 8px 20px rgba(91,75,245,.28);transform:translateY(-2px)}
+  .jnode.on .jdot{background:#fff}
+  .jarrow{color:#c3c8da;font-size:1.1rem}
+  .journey{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.2rem}
+  .journey-body{display:grid;grid-template-columns:1.35fr 1fr;gap:1.2rem;align-items:start}
+  .step-count{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--violet)}
+  .journey h3{font-size:1.25rem;margin:.3rem 0 .4rem}
+  .journey p{color:#3d4459;margin-bottom:.8rem}
+  .journey-controls{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;
+    padding:.5rem .85rem;font-size:.85rem;font-weight:700;cursor:pointer;font-family:var(--sans)
+  }
+  .btn:hover{background:#f4f5fb}
+  .btn.primary{background:var(--violet);border-color:var(--violet);color:#fff}
+  .btn.primary:hover{background:var(--violet-dark)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .jobcard{background:linear-gradient(160deg,#171a30,#262052);border-radius:16px;padding:1rem 1.1rem;color:#e9e8ff;min-height:190px}
+  .jobcard .jhead{display:flex;justify-content:space-between;align-items:center;gap:.5rem;font-size:.78rem;color:#b9b6e8;margin-bottom:.7rem}
+  .jobcard .jrow{display:flex;justify-content:space-between;gap:.6rem;font-size:.85rem;padding:.32rem 0;border-bottom:1px dashed rgba(255,255,255,.12)}
+  .jobcard .jrow:last-child{border-bottom:none}
+  .jobcard .jrow span:first-child{color:#b9b6e8}
+  .jobcard .jrow b{font-weight:700}
+  .jobcard .result{margin-top:.7rem;background:rgba(18,146,90,.2);border:1px solid rgba(74,222,128,.4);border-radius:10px;padding:.5rem .7rem;font-size:.85rem;color:#c9f7dc;display:none}
+  .jobcard .result.show{display:block;animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+  .dots{display:flex;gap:.4rem;justify-content:center;margin-top:1rem}
+  .dots button{width:.55rem;height:.55rem;border-radius:50%;border:none;background:#d5d9e8;cursor:pointer;padding:0}
+  .dots button.on{background:var(--violet);transform:scale(1.25)}
+
+  /* ---------- 4. architektura ---------- */
+  .arch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin:1.1rem 0}
+  .arch-btn{
+    text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;
+    padding:1rem;cursor:pointer;font-family:var(--sans);color:var(--ink);transition:all .18s;box-shadow:var(--shadow)
+  }
+  .arch-btn:hover{transform:translateY(-2px);border-color:#cfcaff}
+  .arch-btn[aria-pressed="true"]{border-color:var(--violet);background:var(--violet-soft);box-shadow:0 8px 22px rgba(91,75,245,.16)}
+  .arch-ico{font-size:1.5rem;display:block;margin-bottom:.35rem}
+  .arch-btn b{display:block;font-size:.95rem}
+  .arch-btn small{color:var(--muted);font-size:.78rem}
+  .arch-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.3rem 1.4rem;box-shadow:var(--shadow);min-height:230px}
+  .arch-panel h3{margin-bottom:.2rem}
+  .arch-panel .tech{font-size:.82rem;color:var(--violet);font-weight:700;margin-bottom:.8rem}
+  .arch-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .arch-cols h4{font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+  .arch-cols ul{font-size:.9rem;margin:0;padding-left:1.1em}
+  .arch-fail{margin-top:1rem;background:var(--red-soft);border-radius:12px;padding:.7rem .9rem;font-size:.88rem;color:#7d1733}
+  .arch-fail b{color:#a51d42}
+
+  /* ---------- 5. statusy ---------- */
+  .state-rail{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1.2rem 0 1.4rem;font-size:.85rem}
+  .state-chip{padding:.45rem .9rem;border-radius:10px;font-weight:800;font-family:var(--mono);font-size:.82rem}
+  .state-chip.pending{background:var(--slate-soft);color:#475069}
+  .state-chip.processing{background:var(--amber-soft);color:#8a5300}
+  .state-chip.completed{background:var(--green-soft);color:#0b7a45}
+  .state-chip.failed{background:var(--red-soft);color:#a51d42}
+  .state-arrow{color:#b9bfd4;font-weight:800}
+  .state-note{color:var(--muted);font-size:.83rem;margin-left:.4rem}
+  .status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem}
+  .status-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:1.1rem;box-shadow:var(--shadow);border-top:5px solid #ccc}
+  .status-card.pending{border-top-color:#98a2bd}
+  .status-card.processing{border-top-color:#f0b429}
+  .status-card.completed{border-top-color:#16a34a}
+  .status-card.failed{border-top-color:#e11d48}
+  .status-card h4{font-family:var(--mono);font-size:.92rem;margin-bottom:.35rem}
+  .status-card p{font-size:.86rem;color:var(--muted);margin:0}
+  .status-card .who{display:block;margin-top:.6rem;font-size:.78rem;color:#3d4459;background:#f6f7fc;border-radius:8px;padding:.4rem .55rem}
+
+  /* ---------- 6. kolejka ---------- */
+  .track{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin:.9rem 0}
+  .chip{display:inline-flex;align-items:center;gap:.4rem;border-radius:999px;padding:.45rem .85rem;font-size:.83rem;font-weight:700;border:1px solid var(--line);background:#fff}
+  .chip.msg{background:var(--violet-soft);border-color:#d9d5ff;color:var(--violet-dark)}
+  .chip.ok{background:var(--green-soft);border-color:#bfe9d2;color:#0b7a45}
+  .chip.bad{background:var(--red-soft);border-color:#f6c9d7;color:#a51d42}
+  .chip.warn{background:var(--amber-soft);border-color:#f5d9a4;color:#8a5300}
+  .track .sep{color:#c3c8da;font-weight:800}
+  .queue-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem 1.3rem;box-shadow:var(--shadow)}
+  .queue-panel h3{margin-bottom:.2rem}
+  .queue-panel .sub{font-size:.85rem;color:var(--muted);margin-bottom:.3rem}
+
+  /* ---------- 7. api ---------- */
+  .api-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:1.1rem 1.2rem;box-shadow:var(--shadow)}
+  .method{display:inline-block;font-family:var(--mono);font-size:.75rem;font-weight:800;padding:.18rem .5rem;border-radius:6px;margin-right:.45rem}
+  .method.post{background:var(--violet-soft);color:var(--violet-dark)}
+  .method.get{background:var(--green-soft);color:#0b7a45}
+  .api-path{font-family:var(--mono);font-size:.9rem;font-weight:700}
+  .kv{display:flex;justify-content:space-between;gap:.7rem;font-size:.84rem;padding:.3rem 0;border-bottom:1px dashed var(--line)}
+  .kv:last-child{border-bottom:none}
+  .kv span:first-child{color:var(--muted)}
+  .kv b{font-family:var(--mono);font-size:.82rem;font-weight:600;text-align:right}
+  .mini-label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:.8rem 0 .2rem}
+
+  /* ---------- 8. docker ---------- */
+  .compose{
+    background:linear-gradient(160deg,#171a30,#242048);border-radius:22px;padding:1.3rem;
+    color:#e9e8ff;border:1px solid #2d2a55
+  }
+  .compose-title{display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem}
+  .compose-title b{font-size:1rem}
+  .compose-title span{font-size:.78rem;color:#b9b6e8}
+  .containers{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem}
+  .container-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:.75rem .85rem}
+  .container-box .cname{display:flex;align-items:center;gap:.45rem;font-weight:700;font-size:.88rem}
+  .container-box .cname i{width:.5rem;height:.5rem;border-radius:50%;background:#7ee2a8;display:inline-block}
+  .container-box small{display:block;color:#b9b6e8;font-size:.76rem;margin-top:.2rem}
+  .container-box.workers{grid-column:span 1}
+  .ports{font-family:var(--mono);font-size:.72rem;color:#c9c5f2}
+  .cmd{
+    display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.82rem;
+    background:#101326;color:#d8d5ff;border:1px solid #2b2f4d;border-radius:10px;padding:.5rem .8rem;margin-top:1rem
+  }
+  .cmd .prompt{color:#7ee2a8}
+
+  /* ---------- 9. kubernetes ---------- */
+  .k8s{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.2rem 1.3rem}
+  .k8s-controls{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;margin-bottom:1rem}
+  .slider-wrap{display:flex;align-items:center;gap:.7rem;font-size:.88rem;font-weight:600}
+  input[type=range]{accent-color:var(--violet);width:170px}
+  .replica-count{font-family:var(--mono);background:var(--violet-soft);color:var(--violet-dark);border-radius:8px;padding:.15rem .5rem;font-weight:800}
+  .namespace{border:2px dashed #cfd4e6;border-radius:16px;padding:1rem;background:#fafbff}
+  .ns-label{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:.6rem}
+  .pods{display:flex;flex-wrap:wrap;gap:.55rem}
+  .pod{
+    display:flex;align-items:center;gap:.45rem;background:#fff;border:1.5px solid #d9deee;border-radius:12px;
+    padding:.5rem .7rem;font-size:.8rem;font-weight:700;font-family:var(--mono);transition:all .25s
+  }
+  .pod i{width:.55rem;height:.55rem;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.16)}
+  .pod.api{border-color:#cfcaff;background:var(--violet-soft)}
+  .pod.api i{background:var(--violet)}
+  .pod.dying{border-color:#f3a6ba;background:var(--red-soft);animation:shake .35s}
+  .pod.dying i{background:var(--red);box-shadow:0 0 0 3px rgba(225,29,72,.16)}
+  .pod.new{animation:pop .35s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  .k8s-msg{margin-top:.9rem;font-size:.88rem;color:var(--muted);min-height:1.5em}
+  .k8s-msg b{color:var(--ink)}
+  .concept{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem;box-shadow:var(--shadow)}
+  .concept h4{margin-bottom:.2rem}
+  .concept p{font-size:.86rem;color:var(--muted);margin:0}
+
+  /* ---------- 10. warstwy ---------- */
+  .layers{display:grid;gap:.6rem;margin:1rem 0}
+  .layer{
+    display:flex;align-items:center;gap:1rem;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:.9rem 1.1rem;box-shadow:var(--shadow);border-left:5px solid var(--violet)
+  }
+  .layer:nth-child(2){border-left-color:#8b7bff}
+  .layer:nth-child(3){border-left-color:#f0b429}
+  .layer:nth-child(4){border-left-color:#16a34a}
+  .layer .lnum{font-family:var(--mono);font-size:.8rem;font-weight:800;color:var(--muted);flex:0 0 2.2rem}
+  .layer b{display:block;font-size:.98rem}
+  .layer span{font-size:.85rem;color:var(--muted)}
+
+  /* ---------- 11. plan ---------- */
+  .week-label{display:flex;align-items:center;gap:.6rem;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:1.2rem 0 .6rem}
+  .week-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  .days{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}
+  .day{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.85rem;box-shadow:var(--shadow);border-top:4px solid var(--violet)}
+  .day.phase2{border-top-color:#f0b429}
+  .day.phase3{border-top-color:#16a34a}
+  .day b{display:block;font-size:.8rem;color:var(--muted)}
+  .day strong{display:block;font-size:.9rem;margin:.15rem 0 .3rem}
+  .day small{font-size:.76rem;color:var(--muted);line-height:1.45;display:block}
+
+  /* ---------- 12. zespół ---------- */
+  .person{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.2rem;box-shadow:var(--shadow)}
+  .avatar{width:2.7rem;height:2.7rem;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;margin-bottom:.6rem;background:linear-gradient(135deg,#5b4bf5,#a78bfa)}
+  .person:nth-child(2) .avatar{background:linear-gradient(135deg,#0ea5e9,#22d3ee)}
+  .person:nth-child(3) .avatar{background:linear-gradient(135deg,#f59e0b,#f97316)}
+  .person h3{margin-bottom:.1rem}
+  .person .role{font-size:.8rem;color:var(--muted);margin-bottom:.6rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.3rem}
+  .chips span{font-size:.74rem;background:#f1f3fa;border-radius:999px;padding:.2rem .55rem;color:#495168}
+  .person .eyes{margin-top:.7rem;font-size:.8rem;color:var(--muted)}
+  .person .eyes b{color:var(--ink)}
+
+  /* ---------- 13. demo ---------- */
+  .scenes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.8rem}
+  .scene{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1rem;box-shadow:var(--shadow);position:relative}
+  .scene .time{position:absolute;top:.8rem;right:.9rem;font-size:.7rem;font-weight:800;color:var(--violet-dark);background:var(--violet-soft);border-radius:999px;padding:.15rem .5rem}
+  .scene .snum{font-family:var(--mono);font-size:.75rem;color:var(--muted);font-weight:700}
+  .scene h4{font-size:.95rem;margin:.2rem 0 .3rem;padding-right:3rem}
+  .scene p{font-size:.82rem;color:var(--muted);margin:0}
+  .scene .expect{margin-top:.5rem;font-size:.78rem;background:#f5f7fc;border-radius:8px;padding:.4rem .55rem;color:#3d4459}
+
+  /* ---------- 14. słowniczek ---------- */
+  .terms{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.7rem}
+  .term{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.85rem 1rem;box-shadow:var(--shadow)}
+  .term b{display:block;font-size:.92rem;margin-bottom:.15rem}
+  .term span{font-size:.82rem;color:var(--muted)}
+
+  /* ---------- 15. zasady ---------- */
+  .no-list{display:flex;flex-wrap:wrap;gap:.45rem}
+  .no-list span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:.35rem .7rem;font-size:.83rem;color:#6b7280;text-decoration:line-through;text-decoration-color:#e11d48}
+  .risk{display:flex;gap:.7rem;align-items:flex-start;padding:.6rem 0;border-bottom:1px dashed var(--line)}
+  .risk:last-child{border-bottom:none}
+  .risk .rnum{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--violet-soft);color:var(--violet-dark);display:grid;place-items:center;font-size:.78rem;font-weight:800}
+  .risk p{margin:0;font-size:.88rem}
+  .risk p b{display:block}
+
+  .closing{background:linear-gradient(140deg,#1d1b3d,#3b2a86);color:#ecebff;border-radius:22px;padding:1.8rem;margin:2rem 0 1rem}
+  .closing h3{font-size:1.35rem;color:#fff;margin-bottom:.4rem}
+  .closing p{margin:0;color:#cfcbf0}
+
+  footer{border-top:1px solid var(--line);padding:2rem 1.25rem 3rem;color:var(--muted);font-size:.86rem}
+  footer .inner{max-width:1120px;margin:0 auto;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+
+  .to-top{
+    position:fixed;right:1.1rem;bottom:1.1rem;width:2.8rem;height:2.8rem;border-radius:50%;
+    border:1px solid var(--line);background:#fff;color:var(--ink);font-size:1.1rem;cursor:pointer;
+    box-shadow:var(--shadow);display:none;z-index:70
+  }
+  .to-top.show{display:grid;place-items:center}
+
+  /* ---------- reveal (tylko gdy JS działa) ---------- */
+  .js .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+  .js .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    .js .reveal{opacity:1;transform:none;transition:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* ---------- responsywność ---------- */
+  @media (max-width:1000px){
+    .big-steps,.status-grid{grid-template-columns:repeat(2,1fr)}
+    .arch-grid{grid-template-columns:repeat(2,1fr)}
+    .days{grid-template-columns:repeat(2,1fr)}
+    .journey-body{grid-template-columns:1fr}
+  }
+  @media (max-width:760px){
+    .flow{flex-direction:column}
+    .flow-arrow{transform:rotate(90deg);align-self:center}
+    .big-steps,.status-grid,.arch-grid,.arch-cols{grid-template-columns:1fr}
+    .days{grid-template-columns:1fr 1fr}
+    .station{display:flex;text-align:left;align-items:center;gap:.8rem}
+    .station .emoji{margin:0}
+    .station b{font-size:.92rem}
+  }
+  @media (max-width:480px){
+    body{font-size:16px}
+    .days{grid-template-columns:1fr}
+    .hero-top{justify-content:flex-start}
+    .version-switch{width:100%;justify-content:space-between}
+  }
+
+  /* ---------- druk ---------- */
+  @media print{
+    body{background:#fff;color:#000;font-size:11pt}
+    .progress,.mininav,.to-top,.version-switch,.hero-top{display:none !important}
+    .hero{background:#fff;color:#000;padding:0 0 1rem;border-bottom:2px solid #000}
+    .hero::after{display:none}
+    .hero h1 em{color:#000;-webkit-text-fill-color:#000;background:none}
+    .hero .lead,.hero-facts .fact,.eyebrow{color:#222;border-color:#999;background:none}
+    .hero-facts .fact b{color:#000}
+    .js .reveal{opacity:1 !important;transform:none !important}
+    .card,.scene,.day,.term,.status-card,.person,.queue-panel,.arch-panel,.big-step{box-shadow:none;break-inside:avoid}
+    section{padding:.6rem 0;break-inside:auto}
+    a{color:#000}
+  }
+</style>
+<script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div class="brand"><span class="dot"></span> System zadań</div>
+      <div class="version-switch" role="group" aria-label="Wersja dokumentu">
+        <a href="index.html">Wersja 1 · techniczna</a>
+        <a href="v2.html" class="active" aria-current="page">Wersja 2 · wizualna</a>
+      </div>
+    </div>
+
+    <span class="eyebrow">Wersja wizualna · bez kodu</span>
+    <h1>Jak działa system, który <em>liczy zadania w tle</em>?</h1>
+    <p class="lead">
+      Wysyłasz zadanie przez API i od razu dostajesz numer. System wkłada je do kolejki,
+      workery liczą je równolegle, a wynik ląduje w bazie. Ty tylko pytasz o status.
+    </p>
+    <div class="hero-facts">
+      <span class="fact"><b>3</b> endpointy</span>
+      <span class="fact"><b>1</b> kolejka</span>
+      <span class="fact"><b>4</b> statusy</span>
+      <span class="fact"><b>N</b> workerów</span>
+      <span class="fact"><b>1</b> komenda do startu</span>
+    </div>
+  </div>
+</header>
+
+<nav class="mininav" aria-label="Spis treści">
+  <div class="mininav-scroll" id="mininav">
+    <a href="#start">W 30 sekund</a>
+    <a href="#restauracja">Analogia</a>
+    <a href="#podroz">Podróż zadania</a>
+    <a href="#architektura">Architektura</a>
+    <a href="#statusy">Statusy</a>
+    <a href="#kolejka">Kolejka</a>
+    <a href="#api">API</a>
+    <a href="#docker">Docker</a>
+    <a href="#kubernetes">Kubernetes</a>
+    <a href="#helm-terraform">Helm i Terraform</a>
+    <a href="#plan">Plan</a>
+    <a href="#zespol">Zespół</a>
+    <a href="#demo">Demo</a>
+    <a href="#slowniczek">Słowniczek</a>
+    <a href="#zasady">Zasady</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ===== 1. W 30 SEKUND ===== -->
+  <section id="start">
+    <div class="section-head reveal">
+      <p class="kicker">1 · Najkrótsze możliwe wyjaśnienie</p>
+      <h2>Trzy kroki, zero magii</h2>
+      <p>Cały system to jedna pętla: przyjmij zadanie, policz je w tle, oddaj wynik.</p>
+    </div>
+
+    <div class="big-steps">
+      <div class="big-step reveal">
+        <div class="bignum">01</div>
+        <h3>Wysyłasz zadanie</h3>
+        <p>Mówisz, co policzyć — np. sumę liczb. Dostajesz numer zadania i status <b>pending</b>.</p>
+      </div>
+      <div class="big-step reveal">
+        <div class="bignum">02</div>
+        <h3>System liczy w tle</h3>
+        <p>Zadanie trafia do kolejki. Wolne workery biorą je po kolei i liczą — kilka naraz.</p>
+      </div>
+      <div class="big-step reveal">
+        <div class="bignum">03</div>
+        <h3>Odbierasz wynik</h3>
+        <p>Pytasz o numer. Gdy status to <b>completed</b>, w odpowiedzi jest gotowy wynik.</p>
+      </div>
+    </div>
+
+    <div class="one-liner reveal">
+      <b>Najważniejsze:</b> API nie czeka, aż zadanie zostanie policzone. Przyjmuje je, zapisuje
+      i od razu odpowiada. Cała ciężka praca dzieje się asynchronicznie — poza żądaniem HTTP.
+    </div>
+  </section>
+
+  <!-- ===== 2. RESTAURACJA ===== -->
+  <section id="restauracja">
+    <div class="section-head reveal">
+      <p class="kicker">2 · Analogia</p>
+      <h2>To działa jak restauracja</h2>
+      <p>Kelner nie stoi przy kuchni i nie czeka na stek. Przyjmuje zamówienie i idzie dalej.</p>
+    </div>
+
+    <div class="flow reveal">
+      <div class="station"><span class="emoji">🙋</span><div><b>Klient</b><span>składa zamówienie</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="station"><span class="emoji">📝</span><div><b>Kelner = API</b><span>przyjmuje i zapisuje</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="station"><span class="emoji">🧾</span><div><b>Sznurek = kolejka</b><span>trzyma zamówienia</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="station"><span class="emoji">👨‍🍳</span><div><b>Kucharze = workery</b><span>liczą równolegle</span></div></div>
+      <div class="flow-arrow">→</div>
+      <div class="station"><span class="emoji">📒</span><div><b>Zeszyt = baza</b><span>pamięta wynik</span></div></div>
+    </div>
+
+    <div class="note violet reveal">
+      <span class="nlabel">Sedno asynchroniczności</span>
+      <p>Kelner przyjmuje 10 zamówień, zanim ktokolwiek zacznie gotować. Dzięki temu sala nie stoi.
+      W naszym systemie API robi dokładnie to samo: przyjmuje zadania i nie blokuje klienta.</p>
+    </div>
+  </section>
+
+  <!-- ===== 3. PODRÓŻ ZADANIA ===== -->
+  <section id="podroz">
+    <div class="section-head reveal">
+      <p class="kicker">3 · Interaktywny przewodnik</p>
+      <h2>Podróż jednego zadania, krok po kroku</h2>
+      <p>Klikaj kroki albo użyj przycisków. Zobaczysz, który element systemu pracuje i co dzieje się ze statusem.</p>
+    </div>
+
+    <div class="journey-diagram reveal" id="journeyDiagram" aria-hidden="true">
+      <div class="jnode" data-node="client"><span class="jdot"></span>Klient</div>
+      <span class="jarrow">→</span>
+      <div class="jnode" data-node="api"><span class="jdot"></span>API</div>
+      <span class="jarrow">→</span>
+      <div class="jnode" data-node="queue"><span class="jdot"></span>Kolejka</div>
+      <span class="jarrow">→</span>
+      <div class="jnode" data-node="worker"><span class="jdot"></span>Worker</div>
+      <span class="jarrow">→</span>
+      <div class="jnode" data-node="db"><span class="jdot"></span>Baza</div>
+    </div>
+
+    <div class="journey reveal">
+      <div class="journey-body">
+        <div>
+          <span class="step-count" id="stepCount">Krok 1 z 6</span>
+          <h3 id="stepTitle">Klient wysyła zadanie</h3>
+          <p id="stepDesc">Wysyła typ zadania i dane, np. sumę liczb 10, 20 i 30. Na razie nie ma jeszcze żadnego rekordu w bazie.</p>
+          <div class="journey-controls">
+            <button class="btn" id="prevStep" type="button">← Wstecz</button>
+            <button class="btn primary" id="nextStep" type="button">Dalej →</button>
+            <button class="btn" id="playSteps" type="button">▶ Odtwórz</button>
+          </div>
+          <div class="dots" id="stepDots" aria-label="Wybierz krok"></div>
+        </div>
+
+        <div class="jobcard">
+          <div class="jhead"><span>Zadanie</span><span>#7f3a-2c91</span></div>
+          <div class="jrow"><span>Typ</span><b>sum</b></div>
+          <div class="jrow"><span>Dane</span><b>10, 20, 30</b></div>
+          <div class="jrow"><span>Status</span><b id="jobStatus">—</b></div>
+          <div class="result" id="jobResult">Wynik: <b>60</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. ARCHITEKTURA ===== -->
+  <section id="architektura">
+    <div class="section-head reveal">
+      <p class="kicker">4 · Cztery elementy</p>
+      <h2>Kto jest kim w systemie</h2>
+      <p>Kliknij element, żeby zobaczyć, co robi, czego nie robi i co się stanie, gdy padnie.</p>
+    </div>
+
+    <div class="arch-grid reveal" id="archButtons">
+      <button class="arch-btn" type="button" data-arch="api" aria-pressed="true">
+        <span class="arch-ico">🚪</span><b>Job API</b><small>przyjmuje zadania</small>
+      </button>
+      <button class="arch-btn" type="button" data-arch="rabbit" aria-pressed="false">
+        <span class="arch-ico">📬</span><b>RabbitMQ</b><small>kolejka zadań</small>
+      </button>
+      <button class="arch-btn" type="button" data-arch="worker" aria-pressed="false">
+        <span class="arch-ico">⚙️</span><b>Workery</b><small>liczą zadania</small>
+      </button>
+      <button class="arch-btn" type="button" data-arch="db" aria-pressed="false">
+        <span class="arch-ico">🗄️</span><b>PostgreSQL</b><small>pamięta stan</small>
+      </button>
+    </div>
+
+    <div class="arch-panel reveal" id="archPanel" aria-live="polite">
+      <h3 id="archName">Job API</h3>
+      <div class="tech" id="archTech">Node.js + TypeScript + Express · port 3000</div>
+      <div class="arch-cols">
+        <div><h4>Robi</h4><ul id="archDoes"></ul></div>
+        <div><h4>Nie robi</h4><ul id="archDoesnt"></ul></div>
+        <div><h4>Technologia</h4><ul id="archTechList"></ul></div>
+      </div>
+      <div class="arch-fail" id="archFail"></div>
+    </div>
+
+    <div class="note amber reveal">
+      <span class="nlabel">Dlaczego baza i kolejka to dwie różne rzeczy</span>
+      <p><b>Kolejka</b> przekazuje pracę i jest ulotna — służy do transportu. <b>Baza</b> pamięta stan
+      i jest trwała. Jeśli worker padnie, wiadomość wróci do kolejki, ale status w bazie nadal mówi prawdę.</p>
+    </div>
+  </section>
+
+  <!-- ===== 5. STATUSY ===== -->
+  <section id="statusy">
+    <div class="section-head reveal">
+      <p class="kicker">5 · Jeden rekord, cztery stany</p>
+      <h2>Statusy zadania</h2>
+      <p>Status to najważniejsza informacja w bazie. Klient patrzy tylko na niego.</p>
+    </div>
+
+    <div class="state-rail reveal">
+      <span class="state-chip pending">pending</span><span class="state-arrow">→</span>
+      <span class="state-chip processing">processing</span><span class="state-arrow">→</span>
+      <span class="state-chip completed">completed</span>
+      <span class="state-note">albo, gdy się nie uda:</span>
+      <span class="state-chip failed">failed</span>
+      <span class="state-note">a retry wraca do pending</span>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card pending reveal">
+        <h4>pending</h4>
+        <p>Zadanie jest zapisane i czeka w kolejce na wolnego workera.</p>
+        <span class="who">Klient widzi: numer + „czekaj”</span>
+      </div>
+      <div class="status-card processing reveal">
+        <h4>processing</h4>
+        <p>Worker właśnie je wziął i liczy. Zwykle trwa to sekundy.</p>
+        <span class="who">Klient widzi: „w trakcie”</span>
+      </div>
+      <div class="status-card completed reveal">
+        <h4>completed</h4>
+        <p>Wynik jest zapisany w bazie. Można go odebrać w każdej chwili.</p>
+        <span class="who">Klient widzi: wynik</span>
+      </div>
+      <div class="status-card failed reveal">
+        <h4>failed</h4>
+        <p>Po trzech nieudanych próbach zadanie odpuszczono. Powód jest w bazie.</p>
+        <span class="who">Klient widzi: komunikat błędu</span>
+      </div>
+    </div>
+
+    <div class="note green reveal">
+      <span class="nlabel">Dlaczego to ma znaczenie</span>
+      <p>Dzięki statusowi klient nie musi czekać z otwartym połączeniem. Może przyjść po wynik
+      za sekundę, za minutę albo za godzinę — rekord w bazie nigdzie nie ucieknie.</p>
+    </div>
+  </section>
+
+  <!-- ===== 6. KOLEJKA ===== -->
+  <section id="kolejka">
+    <div class="section-head reveal">
+      <p class="kicker">6 · Najważniejsza mechanika</p>
+      <h2>Kolejka, potwierdzenia i ponawianie</h2>
+      <p>Trzy pojęcia, które trzeba umieć wyjaśnić na obronie: ack, retry i dead letter.</p>
+    </div>
+
+    <div class="grid g2">
+      <div class="queue-panel reveal">
+        <h3>✅ Gdy wszystko idzie dobrze</h3>
+        <p class="sub">Wiadomość znika z kolejki dopiero po zapisaniu wyniku.</p>
+        <div class="track">
+          <span class="chip msg">📨 wiadomość</span><span class="sep">→</span>
+          <span class="chip">⚙️ worker liczy</span><span class="sep">→</span>
+          <span class="chip">🗄️ zapis wyniku</span><span class="sep">→</span>
+          <span class="chip ok">✓ ACK</span>
+        </div>
+        <p class="muted" style="font-size:.86rem;margin-bottom:0">
+          ACK to potwierdzenie: „zrobione, możesz usunąć”. Gdyby worker potwierdził wcześniej,
+          a baza padła — zadanie zniknęłoby na zawsze.
+        </p>
+      </div>
+
+      <div class="queue-panel reveal">
+        <h3>⚠️ Gdy coś się nie uda</h3>
+        <p class="sub">Błąd nie oznacza od razu porażki. Najpierw trzy próby.</p>
+        <div class="track">
+          <span class="chip bad">✗ błąd</span><span class="sep">→</span>
+          <span class="chip warn">retry 1 · 10 s</span><span class="sep">→</span>
+          <span class="chip warn">retry 2</span><span class="sep">→</span>
+          <span class="chip warn">retry 3</span><span class="sep">→</span>
+          <span class="chip bad">dead letter</span>
+        </div>
+        <p class="muted" style="font-size:.86rem;margin-bottom:0">
+          Po trzeciej próbie zadanie dostaje status <b>failed</b>, a wiadomość trafia do kolejki
+          <b>dead letter</b> — do ręcznego obejrzenia. Dzięki temu nie kręci się w kółko.
+        </p>
+      </div>
+    </div>
+
+    <h3 style="margin-top:1.6rem">Trzy sytuacje, które musisz umieć wyjaśnić</h3>
+    <div class="grid g3">
+      <div class="card reveal">
+        <h4>Worker padł w trakcie</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Nie wysłał ACK, więc RabbitMQ uzna, że wiadomość
+        nie została przetworzona, i odda ją innemu workerowi. Kubernetes dodatkowo odtwarza poda.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Ta sama wiadomość przyszła dwa razy</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Worker najpierw sprawdza status w bazie.
+        Jeśli zadanie już jest <b>completed</b>, potwierdza wiadomość i nic nie liczy. To idempotencja.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Zadanie jest trwale zepsute</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Po trzech próbach idzie do dead letter,
+        a nie blokuje kolejki. Reszta zadań może płynąć dalej.</p>
+      </div>
+    </div>
+
+    <div class="note red reveal">
+      <span class="nlabel">Uczciwe założenie</span>
+      <p>Nie obiecujemy „dokładnie jednego” wykonania. RabbitMQ może dostarczyć wiadomość dwa razy.
+      Zamiast tego robimy przetwarzanie <b>idempotentne</b> — powtórka nie psuje wyniku.</p>
+    </div>
+  </section>
+
+  <!-- ===== 7. API ===== -->
+  <section id="api">
+    <div class="section-head reveal">
+      <p class="kicker">7 · Trzy drzwi do systemu</p>
+      <h2>API w trzech endpointach</h2>
+      <p>Cała komunikacja ze światem zewnętrznym. Nic więcej nie jest potrzebne.</p>
+    </div>
+
+    <div class="grid g3">
+      <div class="api-card reveal">
+        <div><span class="method post">POST</span><span class="api-path">/jobs</span></div>
+        <p class="muted" style="font-size:.86rem">Nowe zadanie.</p>
+        <div class="mini-label">Wysyłasz</div>
+        <div class="kv"><span>type</span><b>sum</b></div>
+        <div class="kv"><span>numbers</span><b>[10, 20, 30]</b></div>
+        <div class="mini-label">Dostajesz</div>
+        <div class="kv"><span>id</span><b>7f3a-2c91</b></div>
+        <div class="kv"><span>status</span><b>pending</b></div>
+      </div>
+
+      <div class="api-card reveal">
+        <div><span class="method get">GET</span><span class="api-path">/jobs/{id}</span></div>
+        <p class="muted" style="font-size:.86rem">Status i wynik.</p>
+        <div class="mini-label">Dostajesz</div>
+        <div class="kv"><span>status</span><b>completed</b></div>
+        <div class="kv"><span>result</span><b>{"sum": 60}</b></div>
+        <div class="kv"><span>finishedAt</span><b>10:00:02</b></div>
+      </div>
+
+      <div class="api-card reveal">
+        <div><span class="method get">GET</span><span class="api-path">/health</span></div>
+        <p class="muted" style="font-size:.86rem">Czy API żyje.</p>
+        <div class="mini-label">Dostajesz</div>
+        <div class="kv"><span>status</span><b>ok</b></div>
+        <p class="muted" style="font-size:.82rem;margin:.7rem 0 0">
+          Kubernetes pyta ten endpoint kilka razy na minutę. Jeśli odpowiedź przestanie przychodzić,
+          pod zostanie zrestartowany.
+        </p>
+      </div>
+    </div>
+
+    <div class="note violet reveal">
+      <span class="nlabel">Kiedy coś pójdzie nie tak</span>
+      <p><b>400</b> — złe dane wejściowe. <b>404</b> — nie ma zadania o takim numerze.
+      <b>503</b> — baza lub kolejka chwilowo niedostępna. Każdy błąd wraca jako czytelny JSON,
+      nie jako strona HTML z wyjątkiem.</p>
+    </div>
+  </section>
+
+  <!-- ===== 8. DOCKER ===== -->
+  <section id="docker">
+    <div class="section-head reveal">
+      <p class="kicker">8 · Wszystko w pudełkach</p>
+      <h2>Docker: cały system na jednym laptopie</h2>
+      <p>Cztery usługi, jedna sieć, jedna komenda. Zero instalowania bazy i RabbitMQ „na systemie”.</p>
+    </div>
+
+    <div class="compose reveal">
+      <div class="compose-title">
+        <b>docker-compose.yml</b>
+        <span>jedna komenda = cztery kontenery</span>
+      </div>
+      <div class="containers">
+        <div class="container-box">
+          <div class="cname"><i></i>api</div>
+          <small>Express + TypeScript</small>
+          <span class="ports">:3000</span>
+        </div>
+        <div class="container-box workers">
+          <div class="cname"><i></i>worker × 3</div>
+          <small>konsumenci kolejki</small>
+          <span class="ports">bez portu</span>
+        </div>
+        <div class="container-box">
+          <div class="cname"><i></i>postgres</div>
+          <small>dane + wolumen</small>
+          <span class="ports">:5432</span>
+        </div>
+        <div class="container-box">
+          <div class="cname"><i></i>rabbitmq</div>
+          <small>kolejka + panel</small>
+          <span class="ports">:5672 · :15672</span>
+        </div>
+      </div>
+      <div class="cmd"><span class="prompt">$</span> docker compose up --build</div>
+    </div>
+
+    <div class="grid g3" style="margin-top:1rem">
+      <div class="card reveal">
+        <h4>Obraz ≠ kontener</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Obraz to przepis (np. „Node + zbudowana aplikacja”).
+        Kontener to uruchomiony przepis. Z jednego obrazu możecie mieć 5 workerów.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Compose = jeden plik</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Opisuje, jakie kontenery powstać, jakie mają
+        zmienne środowiskowe i kto na kogo czeka. Idealny do codziennej pracy.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Wolumen = pamięć</h4>
+        <p class="muted" style="font-size:.88rem;margin:0">Dane PostgreSQL żyją na wolumenie, nie w kontenerze.
+        Restart bazy nie kasuje wyników zadań.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 9. KUBERNETES ===== -->
+  <section id="kubernetes">
+    <div class="section-head reveal">
+      <p class="kicker">9 · Spróbuj sam</p>
+      <h2>Kubernetes: system, który się naprawia</h2>
+      <p>Przesuń suwak i zobacz, jak zmienia się liczba workerów. Potem zabij jednego — Kubernetes go odtworzy.</p>
+    </div>
+
+    <div class="k8s reveal">
+      <div class="k8s-controls">
+        <div class="slider-wrap">
+          <label for="replicas">Liczba workerów</label>
+          <input type="range" id="replicas" min="1" max="6" value="3" step="1">
+          <span class="replica-count" id="replicaCount">3</span>
+        </div>
+        <button class="btn" id="killPod" type="button">💥 Zabij jednego workera</button>
+        <button class="btn" id="resetPods" type="button">Reset</button>
+      </div>
+
+      <div class="namespace">
+        <div class="ns-label">namespace: jobs</div>
+        <div class="pods" id="pods"></div>
+      </div>
+      <p class="k8s-msg" id="k8sMsg" aria-live="polite">
+        <b>Deployment</b> pilnuje, żeby zawsze działała zadana liczba kopii.
+      </p>
+    </div>
+
+    <div class="grid g3" style="margin-top:1rem">
+      <div class="concept reveal">
+        <h4>Deployment</h4>
+        <p>„Utrzymuj N kopii tej aplikacji”. Jeśli pod padnie, Deployment tworzy nowy.</p>
+      </div>
+      <div class="concept reveal">
+        <h4>Service</h4>
+        <p>Stały adres sieciowy dla API. Pody zmieniają IP, ale Service zostaje ten sam.</p>
+      </div>
+      <div class="concept reveal">
+        <h4>Probe</h4>
+        <p>Test „czy aplikacja żyje”. Bez niego Kubernetes nie wie, że coś jest nie tak.</p>
+      </div>
+    </div>
+
+    <div class="note amber reveal">
+      <span class="nlabel">kind = Kubernetes w Dockerze</span>
+      <p>Nie potrzebujecie chmury ani serwera. <b>kind</b> uruchamia cały klaster jako kontenery na
+      Waszym laptopie. Klaster tworzycie osobno przez <code>kind create cluster</code> — nie przez Terraform.</p>
+    </div>
+  </section>
+
+  <!-- ===== 10. HELM I TERRAFORM ===== -->
+  <section id="helm-terraform">
+    <div class="section-head reveal">
+      <p class="kicker">10 · Dwie warstwy wygody</p>
+      <h2>Helm pakuje, Terraform zamawia</h2>
+      <p>Helm opisuje aplikację. Terraform pilnuje, żeby całość istniała w klastrze.</p>
+    </div>
+
+    <div class="layers reveal">
+      <div class="layer"><span class="lnum">01</span><div><b>Terraform</b><span>tworzy namespace i instaluje Helm release. Jedno <code>terraform apply</code>.</span></div></div>
+      <div class="layer"><span class="lnum">02</span><div><b>Helm chart</b><span>zamienia <code>values.yaml</code> na gotowe obiekty Kubernetes.</span></div></div>
+      <div class="layer"><span class="lnum">03</span><div><b>Kubernetes</b><span>uruchamia pody, pilnuje ich liczby i restartuje po awarii.</span></div></div>
+      <div class="layer"><span class="lnum">04</span><div><b>Kontenery</b><span>API i workery — właściwa aplikacja.</span></div></div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card reveal">
+        <h4>Helm: zmieniasz liczbę workerów</h4>
+        <p class="muted" style="font-size:.88rem">W <code>values.yaml</code> jest jedno pole:</p>
+        <div class="cmd" style="margin-top:0"><span class="prompt">›</span> worker.replicas: 3 → 5</div>
+        <p class="muted" style="font-size:.85rem;margin:.7rem 0 0">Jedna zmiana i Kubernetes tworzy dwa nowe pody.
+        To pokazujecie na demo.</p>
+      </div>
+      <div class="card reveal">
+        <h4>Terraform: odtwarzasz całość</h4>
+        <p class="muted" style="font-size:.88rem">Pamięta, co już stworzył, i potrafi to samo usunąć.</p>
+        <div class="cmd" style="margin-top:0"><span class="prompt">›</span> terraform apply · terraform destroy</div>
+        <p class="muted" style="font-size:.85rem;margin:.7rem 0 0">Po <code>destroy</code> w klastrze nie zostaje
+        ani namespace, ani release.</p>
+      </div>
+    </div>
+
+    <div class="note red reveal">
+      <span class="nlabel">Granica, której nie przekraczamy</span>
+      <p>Terraform <b>nie tworzy klastra</b>. Klaster powstaje przez <code>kind</code>.
+      Terraform zarządza tylko tym, co jest w środku. Mniej warstw = mniej rzeczy do debugowania.</p>
+    </div>
+  </section>
+
+  <!-- ===== 11. PLAN ===== -->
+  <section id="plan">
+    <div class="section-head reveal">
+      <p class="kicker">11 · Dwa tygodnie</p>
+      <h2>Plan, który da się dowieźć</h2>
+      <p>Każdy dzień kończy się czymś, co można pokazać. Bez tego projekt rozjeżdża się na końcu.</p>
+    </div>
+
+    <div class="week-label reveal">Tydzień 1 · działająca aplikacja</div>
+    <div class="days">
+      <div class="day reveal"><b>Dzień 1</b><strong>Fundamenty</strong><small>repo, kontrakt, baza, compose z infrastrukturą</small></div>
+      <div class="day reveal"><b>Dzień 2</b><strong>API + worker</strong><small>szkielety, połączenia z bazą i kolejką</small></div>
+      <div class="day reveal"><b>Dzień 3</b><strong>Przepływ</strong><small>pierwsze zadanie kończy się <b>completed</b></small></div>
+      <div class="day reveal"><b>Dzień 4</b><strong>Błędy</strong><small>walidacja, retry, drugi typ zadania</small></div>
+      <div class="day reveal"><b>Dzień 5</b><strong>Compose</strong><small>całość startuje jedną komendą</small></div>
+    </div>
+
+    <div class="week-label reveal">Tydzień 2 · wdrożenie i demo</div>
+    <div class="days">
+      <div class="day phase2 reveal"><b>Dzień 6</b><strong>Kubernetes</strong><small>ręczny YAML: API, worker, baza, kolejka</small></div>
+      <div class="day phase2 reveal"><b>Dzień 7</b><strong>Helm</strong><small>chart i liczba replik w values</small></div>
+      <div class="day phase2 reveal"><b>Dzień 8</b><strong>Terraform</strong><small>apply i destroy całej aplikacji</small></div>
+      <div class="day phase3 reveal"><b>Dzień 9</b><strong>Testy</strong><small>100 zadań, zabity pod, skalowanie</small></div>
+      <div class="day phase3 reveal"><b>Dzień 10</b><strong>Demo</strong><small>dokumentacja i próba generalna</small></div>
+    </div>
+
+    <div class="note amber reveal">
+      <span class="nlabel">Bufor, którego nie ma</span>
+      <p>Jeśli coś się obsunie, tnijcie zakres — nie sen. Najpierw rezygnujecie z drugiego typu zadania,
+      potem z retry, na końcu z Terraforma. Rdzeń: API + kolejka + worker + Docker musi działać.</p>
+    </div>
+  </section>
+
+  <!-- ===== 12. ZESPÓŁ ===== -->
+  <section id="zespol">
+    <div class="section-head reveal">
+      <p class="kicker">12 · Trzy osoby</p>
+      <h2>Kto za co odpowiada</h2>
+      <p>Podział według warstw, nie według plików. Każdy rozumie cały przepływ.</p>
+    </div>
+
+    <div class="grid g3">
+      <div class="person reveal">
+        <div class="avatar">O1</div>
+        <h3>Osoba 1</h3>
+        <div class="role">API i baza danych</div>
+        <div class="chips"><span>Express</span><span>PostgreSQL</span><span>walidacja</span></div>
+        <div class="eyes">Drugie oczy na: <b>schemat bazy i kody błędów</b></div>
+      </div>
+      <div class="person reveal">
+        <div class="avatar">O2</div>
+        <h3>Osoba 2</h3>
+        <div class="role">Kolejka i workery</div>
+        <div class="chips"><span>RabbitMQ</span><span>handlery</span><span>Docker</span></div>
+        <div class="eyes">Drugie oczy na: <b>ack i idempotencję</b></div>
+      </div>
+      <div class="person reveal">
+        <div class="avatar">O3</div>
+        <h3>Osoba 3</h3>
+        <div class="role">Infrastruktura i dokumentacja</div>
+        <div class="chips"><span>kind</span><span>Helm</span><span>Terraform</span></div>
+        <div class="eyes">Drugie oczy na: <b>odtwarzalność od zera</b></div>
+      </div>
+    </div>
+
+    <div class="note violet reveal">
+      <span class="nlabel">Dzień 1 robicie razem</span>
+      <p>Wspólnie ustalcie format zadania, schemat bazy i plik Compose z samą infrastrukturą.
+      To 3–4 godziny, które oszczędzają dwa dni integracji. Potem integrujcie codziennie — nie po tygodniu.</p>
+    </div>
+  </section>
+
+  <!-- ===== 13. DEMO ===== -->
+  <section id="demo">
+    <div class="section-head reveal">
+      <p class="kicker">13 · Prezentacja</p>
+      <h2>Demo w 7 minut</h2>
+      <p>Każda scena ma jeden przekaz. Nie pokazujcie kodu, pokazujcie efekty.</p>
+    </div>
+
+    <div class="scenes">
+      <div class="scene reveal"><span class="time">45 s</span><span class="snum">01</span><h4>Architektura</h4><p>Jeden slajd: klient → API → kolejka → workery → baza.</p><div class="expect">Przekaz: „API nie czeka na wynik”.</div></div>
+      <div class="scene reveal"><span class="time">60 s</span><span class="snum">02</span><h4>Deploy</h4><p><code>terraform apply</code> i podgląd, jak pody wstają.</p><div class="expect">Przekaz: „całość jedną komendą”.</div></div>
+      <div class="scene reveal"><span class="time">50 s</span><span class="snum">03</span><h4>Jedno zadanie</h4><p>Wysyłasz sumę, pokazujesz pending → completed i wynik.</p><div class="expect">Wynik: 60.</div></div>
+      <div class="scene reveal"><span class="time">90 s</span><span class="snum">04</span><h4>100 zadań</h4><p>Skrypt wysyła 100 zadań. Trzy workery liczą równolegle.</p><div class="expect">Kolejka maleje, żadne nie zostaje pending.</div></div>
+      <div class="scene reveal"><span class="time">90 s</span><span class="snum">05</span><h4>Awaria</h4><p>Zabijasz jednego workera. Kubernetes tworzy nowy pod.</p><div class="expect">Żadne zadanie nie ginie.</div></div>
+      <div class="scene reveal"><span class="time">60 s</span><span class="snum">06</span><h4>Skalowanie</h4><p>Zmieniasz repliki z 3 na 5 i wysyłasz kolejną porcję.</p><div class="expect">Więcej podów = szybsza kolejka.</div></div>
+      <div class="scene reveal"><span class="time">30 s</span><span class="snum">07</span><h4>Podsumowanie</h4><p>Czego się nauczyliście i jakie są ograniczenia projektu.</p><div class="expect">Wspomnijcie o braku „exactly-once”.</div></div>
+    </div>
+
+    <div class="note green reveal">
+      <span class="nlabel">Plan B</span>
+      <p>Miejcie 2-minutowe nagranie działającego demo. Jeśli klaster odmówi współpracy,
+      odtwarzacie nagranie i tłumaczycie architekturę — nikt nie zauważy różnicy.</p>
+    </div>
+  </section>
+
+  <!-- ===== 14. SŁOWNICZEK ===== -->
+  <section id="slowniczek">
+    <div class="section-head reveal">
+      <p class="kicker">14 · Ściąga pojęć</p>
+      <h2>Słowniczek na obronę</h2>
+      <p>Krótkie definicje bez żargonu. Jeśli umiecie to powiedzieć własnymi słowami — umiecie projekt.</p>
+    </div>
+
+    <div class="terms">
+      <div class="term reveal"><b>Asynchroniczność</b><span>Wysyłasz pracę i nie czekasz na wynik. Wracasz po niego później.</span></div>
+      <div class="term reveal"><b>Kolejka</b><span>Lista zadań czekających na wykonanie. Worker bierze jedno, reszta czeka.</span></div>
+      <div class="term reveal"><b>Producer / consumer</b><span>Producer wkłada wiadomość (API), consumer wyjmuje (worker).</span></div>
+      <div class="term reveal"><b>ACK</b><span>Potwierdzenie „zrobione”. Wysyłane dopiero po zapisie wyniku.</span></div>
+      <div class="term reveal"><b>Retry</b><span>Ponowna próba po błędzie, z opóźnieniem. U nas maksymalnie trzy.</span></div>
+      <div class="term reveal"><b>Dead letter</b><span>Kosz na wiadomości, których nie udało się przetworzyć.</span></div>
+      <div class="term reveal"><b>Idempotencja</b><span>To samo zadanie wykonane dwa razy daje jeden wynik, nie dwa.</span></div>
+      <div class="term reveal"><b>Replika</b><span>Kopia procesu lub poda. 3 repliki = 3 workery.</span></div>
+      <div class="term reveal"><b>Pod</b><span>Najmniejsza jednostka w Kubernetesie — jeden lub kilka kontenerów.</span></div>
+      <div class="term reveal"><b>Probe</b><span>Test, czy aplikacja żyje i czy można wysyłać do niej ruch.</span></div>
+      <div class="term reveal"><b>Helm chart</b><span>Szablony YAML-i z parametrami w <code>values.yaml</code>.</span></div>
+      <div class="term reveal"><b>Terraform state</b><span>Plik, w którym Terraform pamięta, co już stworzył.</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 15. ZASADY ===== -->
+  <section id="zasady">
+    <div class="section-head reveal">
+      <p class="kicker">15 · Czego pilnować</p>
+      <h2>Granice projektu i największe ryzyka</h2>
+      <p>Dobry projekt to taki, który jest skończony. Świadome „nie” jest częścią architektury.</p>
+    </div>
+
+    <div class="grid g2">
+      <div class="card reveal">
+        <h4>Świadomie poza zakresem</h4>
+        <div class="no-list">
+          <span>frontend</span><span>logowanie</span><span>KEDA</span><span>Prometheus</span>
+          <span>multi-cloud</span><span>upload plików</span><span>mikroserwisy</span><span>gRPC</span>
+        </div>
+        <p class="muted" style="font-size:.86rem;margin:.9rem 0 0">Każda z tych rzeczy jest ciekawa,
+        ale nie uczy niczego nowego o przepływie, który chcecie pokazać.</p>
+      </div>
+
+      <div class="card reveal">
+        <h4>Na co uważać</h4>
+        <div class="risk"><span class="rnum">1</span><p><b>Integracja na końcu</b>Codzienny merge do głównej gałęzi. Kontrakt ustalony w dniu 1.</p></div>
+        <div class="risk"><span class="rnum">2</span><p><b>Rozrastanie się zakresu</b>Zamroźcie funkcje po dniu 5. Nowe pomysły zapisujcie na listę „później”.</p></div>
+        <div class="risk"><span class="rnum">3</span><p><b>ACK przed zapisem</b>Potwierdzajcie wiadomość dopiero po <code>UPDATE</code> w bazie.</p></div>
+      </div>
+    </div>
+
+    <div class="closing reveal">
+      <h3>Najważniejsza rada</h3>
+      <p>Najpierw niech działa najprostsza wersja end-to-end: jedno zadanie, jeden worker, jedna baza.
+      Dopiero potem dodawajcie kolejne workery, retry, Helm i Terraform. System, który działa w całości,
+      zawsze wygrywa z ambitnym, który działa w połowie.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <span><strong>System zadań</strong> — wersja wizualna, bez kodu.</span>
+    <span><a href="index.html">Przejdź do wersji technicznej →</a></span>
+  </div>
+</footer>
+
+<button class="to-top" id="toTop" type="button" aria-label="Wróć na górę">↑</button>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- pasek postępu + przycisk na górę ---------- */
+  var progress = document.getElementById("progress");
+  var toTop = document.getElementById("toTop");
+
+  function onScroll() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    toTop.classList.toggle("show", h.scrollTop > 700);
+  }
+  document.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  toTop.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  /* ---------- aktywna sekcja w mininav ---------- */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll("#mininav a"));
+  var navById = {};
+  navLinks.forEach(function (a) { navById[a.getAttribute("href").slice(1)] = a; });
+
+  if ("IntersectionObserver" in window) {
+    var sectionObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        navLinks.forEach(function (a) { a.classList.remove("active"); });
+        if (navById[entry.target.id]) navById[entry.target.id].classList.add("active");
+      });
+    }, { rootMargin: "-15% 0px -70% 0px", threshold: 0 });
+
+    document.querySelectorAll("main section").forEach(function (s) { sectionObserver.observe(s); });
+  }
+
+  /* ---------- animacja pojawiania ---------- */
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if ("IntersectionObserver" in window && !reduceMotion) {
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll(".reveal").forEach(function (el) { revealObserver.observe(el); });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ---------- 3. podróż zadania ---------- */
+  var steps = [
+    {
+      title: "Klient wysyła zadanie",
+      desc: "Wysyła typ zadania i dane, np. sumę liczb 10, 20 i 30. Na razie nie ma jeszcze żadnego rekordu w bazie.",
+      nodes: ["client"],
+      status: "—",
+      result: false
+    },
+    {
+      title: "API sprawdza dane",
+      desc: "Waliduje payload: czy liczby to naprawdę liczby i czy jest ich rozsądna liczba. Zły request kończy się błędem 400.",
+      nodes: ["client", "api"],
+      status: "—",
+      result: false
+    },
+    {
+      title: "Rekord w bazie i wiadomość w kolejce",
+      desc: "API tworzy zadanie ze statusem pending, publikuje wiadomość do RabbitMQ i od razu odpowiada klientowi 202 z numerem.",
+      nodes: ["api", "queue", "db"],
+      status: "pending",
+      result: false
+    },
+    {
+      title: "Worker bierze zadanie",
+      desc: "Wolny worker pobiera wiadomość i zmienia status na processing. Inne workery mogą w tym czasie liczyć inne zadania.",
+      nodes: ["queue", "worker", "db"],
+      status: "processing",
+      result: false
+    },
+    {
+      title: "Worker liczy i zapisuje wynik",
+      desc: "Wykonuje operację, zapisuje wynik w bazie i ustawia status completed. Dopiero teraz potwierdza wiadomość (ACK).",
+      nodes: ["worker", "db"],
+      status: "completed",
+      result: true
+    },
+    {
+      title: "Klient odbiera wynik",
+      desc: "Ponownie pyta GET /jobs/{id}. Widzi status completed i gotowy wynik. Cała operacja mogła zająć sekundy albo minuty — klient nie musiał czekać.",
+      nodes: ["client", "api", "db"],
+      status: "completed",
+      result: true
+    }
+  ];
+
+  var currentStep = 0;
+  var playTimer = null;
+
+  var elCount = document.getElementById("stepCount");
+  var elTitle = document.getElementById("stepTitle");
+  var elDesc = document.getElementById("stepDesc");
+  var elStatus = document.getElementById("jobStatus");
+  var elResult = document.getElementById("jobResult");
+  var elPrev = document.getElementById("prevStep");
+  var elNext = document.getElementById("nextStep");
+  var elPlay = document.getElementById("playSteps");
+  var elDots = document.getElementById("stepDots");
+  var jnodes = Array.prototype.slice.call(document.querySelectorAll("#journeyDiagram .jnode"));
+
+  steps.forEach(function (_, i) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", "Krok " + (i + 1));
+    b.addEventListener("click", function () { stopPlay(); renderStep(i); });
+    elDots.appendChild(b);
+  });
+
+  function renderStep(i) {
+    currentStep = Math.max(0, Math.min(steps.length - 1, i));
+    var s = steps[currentStep];
+
+    elCount.textContent = "Krok " + (currentStep + 1) + " z " + steps.length;
+    elTitle.textContent = s.title;
+    elDesc.textContent = s.desc;
+
+    elStatus.textContent = s.status;
+    elStatus.className = "";
+    if (s.status === "pending" || s.status === "processing" || s.status === "completed" || s.status === "failed") {
+      elStatus.className = "pill " + s.status;
+    }
+    elResult.classList.toggle("show", !!s.result);
+
+    jnodes.forEach(function (n) {
+      n.classList.toggle("on", s.nodes.indexOf(n.getAttribute("data-node")) !== -1);
+    });
+
+    Array.prototype.forEach.call(elDots.children, function (dot, idx) {
+      dot.classList.toggle("on", idx === currentStep);
+    });
+
+    elPrev.disabled = currentStep === 0;
+    elNext.disabled = currentStep === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+      elPlay.textContent = "▶ Odtwórz";
+    }
+  }
+
+  elPrev.addEventListener("click", function () { stopPlay(); renderStep(currentStep - 1); });
+  elNext.addEventListener("click", function () { stopPlay(); renderStep(currentStep + 1); });
+
+  elPlay.addEventListener("click", function () {
+    if (playTimer) { stopPlay(); return; }
+    var i = currentStep === steps.length - 1 ? 0 : currentStep;
+    renderStep(i);
+    elPlay.textContent = "⏸ Zatrzymaj";
+    playTimer = setInterval(function () {
+      if (i >= steps.length - 1) { stopPlay(); return; }
+      i += 1;
+      renderStep(i);
+    }, 1700);
+  });
+
+  renderStep(0);
+
+  /* ---------- 4. architektura ---------- */
+  var arch = {
+    api: {
+      name: "Job API",
+      tech: "Node.js + TypeScript + Express · port 3000",
+      does: ["sprawdza poprawność danych", "tworzy rekord zadania", "publikuje wiadomość do kolejki", "odpowiada na pytania o status"],
+      doesnt: ["nie liczy zadań", "nie konsumuje kolejki", "nie przechowuje wyników"],
+      techList: ["Express 5", "Zod", "pg", "amqplib"],
+      fail: "Gdy API padnie, Kubernetes odtworzy poda. Zadania czekające w kolejce nie giną — klient po prostu chwilowo nie może wysłać nowego."
+    },
+    rabbit: {
+      name: "RabbitMQ",
+      tech: "broker wiadomości · porty 5672 i 15672",
+      does: ["trzyma wiadomości w kolejce", "rozdaje je wolnym workerom", "obsługuje retry po błędzie", "odkłada trwale zepsute do dead letter"],
+      doesnt: ["nie zna wyniku zadania", "nie jest bazą danych", "nie pilnuje statusów"],
+      techList: ["kolejka jobs", "jobs.retry", "jobs.dead", "panel :15672"],
+      fail: "Wiadomości są trwałe, więc po restarcie wracają. Gdy broker jest niedostępny, API zwraca 503, ale nie gubi przyjętych zadań."
+    },
+    worker: {
+      name: "Workery",
+      tech: "osobna aplikacja Node.js · 1..N replik",
+      does: ["pobiera wiadomość z kolejki", "wykonuje obliczenia", "zapisuje wynik i status", "potwierdza wiadomość po sukcesie"],
+      doesnt: ["nie wystawia HTTP", "nie tworzy zadań", "nie decyduje o kolejności"],
+      techList: ["amqplib", "handlery sum / csv", "retry x3", "prefetch = 1"],
+      fail: "Gdy worker padnie w trakcie, brak ACK sprawia, że wiadomość wraca do kolejki. Inny worker dokończy zadanie."
+    },
+    db: {
+      name: "PostgreSQL",
+      tech: "baza danych · port 5432",
+      does: ["przechowuje typ i dane zadania", "trzyma aktualny status", "zapisuje wynik lub błąd", "pozwala odpytać o historię"],
+      doesnt: ["nie jest kolejką", "nie wykonuje obliczeń", "nie wysyła powiadomień"],
+      techList: ["tabela jobs", "JSONB", "indeks po statusie", "wolumen danych"],
+      fail: "Gdy baza padnie, API zwraca 503 i nie przyjmuje nowych zadań. Kolejka czeka, a po powrocie bazy praca jest kontynuowana."
+    }
+  };
+
+  var archButtons = Array.prototype.slice.call(document.querySelectorAll("#archButtons .arch-btn"));
+  var elArchName = document.getElementById("archName");
+  var elArchTech = document.getElementById("archTech");
+  var elArchDoes = document.getElementById("archDoes");
+  var elArchDoesnt = document.getElementById("archDoesnt");
+  var elArchTechList = document.getElementById("archTechList");
+  var elArchFail = document.getElementById("archFail");
+
+  function list(items) {
+    return items.map(function (x) { return "<li>" + x + "</li>"; }).join("");
+  }
+
+  function renderArch(key) {
+    var d = arch[key];
+    elArchName.textContent = d.name;
+    elArchTech.textContent = d.tech;
+    elArchDoes.innerHTML = list(d.does);
+    elArchDoesnt.innerHTML = list(d.doesnt);
+    elArchTechList.innerHTML = list(d.techList);
+    elArchFail.innerHTML = "<b>Gdy padnie:</b> " + d.fail;
+
+    archButtons.forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-arch") === key));
+    });
+  }
+
+  archButtons.forEach(function (b) {
+    b.addEventListener("click", function () { renderArch(b.getAttribute("data-arch")); });
+  });
+
+  renderArch("api");
+
+  /* ---------- 9. kubernetes ---------- */
+  var replicaInput = document.getElementById("replicas");
+  var replicaCount = document.getElementById("replicaCount");
+  var podsBox = document.getElementById("pods");
+  var k8sMsg = document.getElementById("k8sMsg");
+  var killBtn = document.getElementById("killPod");
+  var resetBtn = document.getElementById("resetPods");
+
+  var podSeq = 3;
+  var podCount = 3;
+  var busy = false;
+
+  function makePod(name, isApi, extraClass) {
+    var el = document.createElement("div");
+    el.className = "pod" + (isApi ? " api" : "") + (extraClass ? " " + extraClass : "");
+    el.innerHTML = "<i></i>" + name;
+    return el;
+  }
+
+  function renderPods(animateNew) {
+    podsBox.innerHTML = "";
+    podsBox.appendChild(makePod("api-6d9f", true));
+
+    for (var i = 1; i <= podCount; i++) {
+      var fresh = animateNew && i === podCount;
+      podsBox.appendChild(makePod("worker-" + i, false, fresh ? "new" : ""));
+    }
+  }
+
+  replicaInput.addEventListener("input", function () {
+    podCount = parseInt(replicaInput.value, 10);
+    replicaCount.textContent = String(podCount);
+    renderPods(false);
+    k8sMsg.innerHTML = "<b>Deployment</b> dostosował liczbę podów do <b>" + podCount +
+      "</b>. Kubernetes robi to bez przestoju — nowe pody dołączają do kolejki.";
+  });
+
+  function setBusy(state) {
+    busy = state;
+    replicaInput.disabled = state;
+    killBtn.disabled = state;
+    resetBtn.disabled = state;
+  }
+
+  killBtn.addEventListener("click", function () {
+    if (busy) return;
+    var pods = podsBox.querySelectorAll(".pod:not(.api)");
+    if (!pods.length) return;
+
+    setBusy(true);
+    var victim = pods[pods.length - 1];
+    var oldName = victim.textContent.trim();
+
+    victim.classList.add("dying");
+    k8sMsg.innerHTML = "Pod <b>" + oldName + "</b> został usunięty. RabbitMQ nie dostał potwierdzenia — wiadomość wróci do kolejki.";
+
+    setTimeout(function () {
+      podSeq += 1;
+      victim.remove();
+      podsBox.appendChild(makePod("worker-" + podSeq, false, "new"));
+      k8sMsg.innerHTML = "<b>Kubernetes odtworzył poda</b> w ~1,5 s. Zadanie nie zginęło — inny worker je dokończy.";
+      setBusy(false);
+    }, 1500);
+  });
+
+  resetBtn.addEventListener("click", function () {
+    if (busy) return;
+    podCount = parseInt(replicaInput.value, 10);
+    podSeq = podCount;
+    renderPods(false);
+    k8sMsg.innerHTML = "<b>Deployment</b> pilnuje, żeby zawsze działała zadana liczba kopii.";
+  });
+
+  renderPods(false);
+})();
+</script>
+</body>
+</html>

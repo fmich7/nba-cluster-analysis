@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System przetwarzania zadań — TypeScript, Docker, Kubernetes, Terraform</title>
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --card:#ffffff;
+    --ink:#141824;
+    --muted:#5b6478;
+    --line:#e3e7ef;
+    --accent:#4f46e5;
+    --accent-soft:#eef0ff;
+    --ok:#0f9d58;
+    --ok-soft:#e8f6ee;
+    --warn:#b45309;
+    --warn-soft:#fdf3e3;
+    --bad:#dc2626;
+    --bad-soft:#fdeaea;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.65;
+    font-size:16.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.88em;background:#eef1f7;padding:.12em .38em;border-radius:5px}
+  h1,h2,h3,h4{line-height:1.25;margin:0 0 .5em}
+  h1{font-size:clamp(1.9rem,4vw,2.9rem);letter-spacing:-.02em}
+  h2{font-size:clamp(1.4rem,2.4vw,1.85rem);letter-spacing:-.01em;scroll-margin-top:20px}
+  h3{font-size:1.12rem;margin-top:1.4em}
+  h4{font-size:1rem;margin-top:1.1em}
+  p{margin:.6em 0 1em}
+  ul,ol{margin:.4em 0 1em;padding-left:1.35em}
+  li{margin:.28em 0}
+  strong{font-weight:650}
+
+  /* ---------- pasek postępu ---------- */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:50;transition:width .1s linear}
+
+  /* ---------- nagłówek ---------- */
+  .hero{
+    background:linear-gradient(160deg,#151a2e 0%,#242a4d 55%,#3b2f74 100%);
+    color:#fff;
+    padding:clamp(2.2rem,6vw,4rem) 1.25rem clamp(2rem,5vw,3.2rem);
+  }
+  .hero-inner{max-width:1180px;margin:0 auto}
+  .hero-top{display:flex;justify-content:flex-end;margin-bottom:1.1rem}
+  .version-switch{
+    display:inline-flex;gap:.2rem;padding:.22rem;border-radius:999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)
+  }
+  .version-switch a{
+    font-size:.78rem;padding:.34rem .8rem;border-radius:999px;color:#c9cdf0;
+    text-decoration:none;white-space:nowrap;transition:background .15s,color .15s
+  }
+  .version-switch a:hover{color:#fff;text-decoration:none;background:rgba(255,255,255,.12)}
+  .version-switch a.active{background:#fff;color:#1a1f36;font-weight:700}
+  .version-switch a.active:hover{background:#fff;color:#1a1f36}
+  .eyebrow{
+    display:inline-block;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;
+    color:#c7c9f5;border:1px solid rgba(255,255,255,.28);border-radius:999px;
+    padding:.32rem .8rem;margin-bottom:1rem
+  }
+  .hero h1{color:#fff;max-width:20ch}
+  .hero p.lead{color:#d9dcf2;font-size:1.1rem;max-width:70ch;margin-top:.4rem}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.4rem}
+  .tag{
+    font-size:.82rem;padding:.32rem .7rem;border-radius:999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#e9eaff
+  }
+  .hero-meta{display:flex;flex-wrap:wrap;gap:1.6rem;margin-top:1.8rem;font-size:.9rem;color:#c2c6e3}
+  .hero-meta b{display:block;color:#fff;font-size:1rem}
+
+  /* ---------- układ ---------- */
+  .layout{
+    max-width:1180px;margin:0 auto;padding:2.4rem 1.25rem 5rem;
+    display:grid;grid-template-columns:250px minmax(0,1fr);gap:2.6rem;align-items:start;
+  }
+  .sidebar{position:sticky;top:1.2rem;max-height:calc(100vh - 2.4rem);overflow:auto;font-size:.9rem}
+  .sidebar .toc-title{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 .7rem .6rem}
+  .toc{list-style:none;margin:0;padding:0;border-left:2px solid var(--line)}
+  .toc li{margin:0}
+  .toc a{
+    display:block;padding:.32rem .7rem;color:var(--muted);border-left:2px solid transparent;
+    margin-left:-2px;line-height:1.35
+  }
+  .toc a:hover{color:var(--ink);text-decoration:none;background:#eef0f7}
+  .toc a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600;background:var(--accent-soft)}
+  .sidebar-tools{display:flex;gap:.5rem;margin-top:1.2rem;padding-left:.4rem}
+
+  main{min-width:0}
+  .section{margin:0 0 3.4rem;scroll-margin-top:20px}
+  .section > h2{
+    padding-bottom:.4rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem;
+  }
+  .section-num{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:.5rem;font-weight:700}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.3rem;box-shadow:var(--shadow);margin:1rem 0
+  }
+  .grid{display:grid;gap:1rem}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .grid-4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+
+  .note{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:.9rem 1.1rem;margin:1rem 0}
+  .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+  .note.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+  .note.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+  .note p:last-child{margin-bottom:0}
+  .note .label{display:block;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:.25rem;color:var(--muted)}
+
+  /* ---------- tabelle ---------- */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);margin:1rem 0}
+  table{border-collapse:collapse;width:100%;font-size:.93rem}
+  th,td{padding:.62rem .8rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  th{background:#f3f5fa;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td code{white-space:nowrap}
+
+  /* ---------- plakietki ---------- */
+  .pill{display:inline-block;font-size:.74rem;font-weight:700;padding:.14rem .55rem;border-radius:999px;white-space:nowrap}
+  .pill.ok{background:var(--ok-soft);color:#0b7a45}
+  .pill.warn{background:var(--warn-soft);color:#8a4207}
+  .pill.bad{background:var(--bad-soft);color:#a81c1c}
+  .pill.info{background:var(--accent-soft);color:#3b32b8}
+  .pill.neutral{background:#eef1f7;color:#4b5468}
+
+  /* ---------- kod ---------- */
+  .code{background:#12151f;border-radius:12px;overflow:hidden;margin:1rem 0;border:1px solid #23283a}
+  .code-head{
+    display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:.5rem .85rem;background:#181c2a;border-bottom:1px solid #262b3d;
+    font-family:var(--mono);font-size:.76rem;color:#9aa4c0
+  }
+  .code-head .copy{
+    background:#262c3f;color:#c9d1e8;border:1px solid #333a52;border-radius:6px;
+    font-size:.72rem;padding:.2rem .55rem;cursor:pointer;font-family:var(--sans)
+  }
+  .code-head .copy:hover{background:#313952}
+  .code pre{margin:0;padding:.95rem 1rem;overflow-x:auto;color:#e4e8f5;font-family:var(--mono);font-size:.84rem;line-height:1.6}
+  .code code{background:none;padding:0;font-size:inherit;color:inherit}
+
+  /* ---------- story / kroki ---------- */
+  .steps{list-style:none;padding:0;counter-reset:step}
+  .steps li{position:relative;padding-left:2.6rem;margin:.75rem 0;counter-increment:step}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:.05rem;width:1.75rem;height:1.75rem;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:.85rem;font-weight:700;display:grid;place-items:center
+  }
+  .steps li b{display:block}
+
+  .state-flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1rem 0;font-size:.9rem}
+  .state{background:#eef1f7;border:1px solid var(--line);border-radius:8px;padding:.35rem .7rem;font-family:var(--mono);font-size:.82rem}
+  .arrow{color:var(--muted);font-weight:700}
+
+  /* ---------- epiki ---------- */
+  .epic{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);margin:1.2rem 0;overflow:hidden}
+  .epic > summary{
+    cursor:pointer;list-style:none;padding:1rem 1.2rem;display:flex;align-items:center;gap:.8rem;
+    background:linear-gradient(180deg,#fff,#fafbfe);border-bottom:1px solid transparent
+  }
+  .epic[open] > summary{border-bottom-color:var(--line)}
+  .epic > summary::-webkit-details-marker{display:none}
+  .epic > summary::after{content:"▾";margin-left:auto;color:var(--muted);transition:transform .2s}
+  .epic[open] > summary::after{transform:rotate(180deg)}
+  .epic-id{font-family:var(--mono);font-size:.75rem;background:var(--accent-soft);color:#3b32b8;padding:.2rem .5rem;border-radius:6px;font-weight:700}
+  .epic-title{font-weight:650}
+  .epic-body{padding:.4rem 1.2rem 1.2rem}
+  .task{border-top:1px dashed var(--line);padding:.9rem 0 .3rem}
+  .task:first-child{border-top:none}
+  .task-head{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem;margin-bottom:.35rem}
+  .task-id{font-family:var(--mono);font-size:.78rem;color:var(--muted);font-weight:600}
+  .task-title{font-weight:600}
+  .ac{list-style:none;padding:0;margin:.3rem 0 .2rem}
+  .ac li{position:relative;padding-left:1.5rem;margin:.2rem 0;font-size:.92rem;color:#333a4c}
+  .ac li::before{
+    content:"";position:absolute;left:.1rem;top:.42rem;width:.74rem;height:.74rem;
+    border:1.5px solid var(--accent);border-radius:3px;background:#fff
+  }
+
+  /* ---------- drzewo ---------- */
+  .tree{
+    font-family:var(--mono);font-size:.82rem;line-height:1.65;background:#12151f;color:#dfe4f2;
+    border-radius:12px;padding:1rem 1.15rem;overflow-x:auto;margin:1rem 0
+  }
+  .tree .c{color:#7c86a5}
+
+  /* ---------- stopka ---------- */
+  footer{border-top:1px solid var(--line);padding:2rem 1.25rem 3rem;color:var(--muted);font-size:.88rem}
+  footer .inner{max-width:1180px;margin:0 auto}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:9px;padding:.42rem .75rem;font-size:.82rem;cursor:pointer;font-family:var(--sans);font-weight:600
+  }
+  .btn:hover{background:#f1f3fa}
+
+  .lead-in{font-size:1.03rem;color:#2c3346}
+
+  /* ---------- mobile ---------- */
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;gap:1.4rem;padding-top:1.4rem}
+    .sidebar{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:1rem}
+    .toc{display:grid;grid-template-columns:1fr 1fr;border-left:none}
+    .toc a{border-left:none;padding:.25rem .4rem}
+    .toc a.active{background:transparent;font-weight:700}
+  }
+  @media (max-width:520px){
+    .toc{grid-template-columns:1fr 1fr;gap:0 .4rem;font-size:.82rem}
+    .toc a{padding:.22rem .2rem}
+    body{font-size:16px}
+  }
+
+  /* ---------- druk ---------- */
+  @media print{
+    body{background:#fff;font-size:11pt}
+    .progress,.sidebar,.print-only,.code-head .copy,.sidebar-tools,.version-switch,.hero-top{display:none !important}
+    .layout{display:block;max-width:none;padding:0}
+    .hero{background:#fff;color:#000;padding:0 0 1rem;border-bottom:2px solid #000}
+    .hero h1,.hero p.lead,.hero-meta b{color:#000}
+    .hero p.lead,.hero-meta,.eyebrow{color:#333}
+    .eyebrow{border-color:#999;color:#333}
+    .card,.table-wrap,.epic{box-shadow:none;border-color:#bbb}
+    .epic{border:1px solid #bbb}
+    .code{background:#f4f4f4;border:1px solid #ccc}
+    .code pre,.tree{color:#000;background:#f4f4f4}
+    .code-head{background:#e9e9e9;color:#000;border-color:#ccc}
+    section{break-inside:auto}
+    .card,.task,.code,.table-wrap{break-inside:avoid}
+    h2,h3{break-after:avoid}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div class="version-switch" role="group" aria-label="Wersja dokumentu">
+        <a href="index.html" class="active" aria-current="page">Wersja 1 · techniczna</a>
+        <a href="v2.html">Wersja 2 · wizualna</a>
+      </div>
+    </div>
+    <span class="eyebrow">Projekt uczelniany · wirtualizacja i konteneryzacja</span>
+    <h1>Rozproszony system przetwarzania zadań</h1>
+    <p class="lead">
+      REST API przyjmuje zadania, RabbitMQ trzyma je w kolejce, a kilka workerów liczy je równolegle
+      i zapisuje wyniki w PostgreSQL. Wszystko w <strong>TypeScripcie</strong>, uruchamiane przez
+      Docker Compose, a potem w Kubernetesie przez Helm i Terraform.
+    </p>
+    <div class="hero-tags">
+      <span class="tag">TypeScript + Node.js</span>
+      <span class="tag">RabbitMQ</span>
+      <span class="tag">PostgreSQL</span>
+      <span class="tag">Docker Compose</span>
+      <span class="tag">kind + Helm</span>
+      <span class="tag">Terraform</span>
+    </div>
+    <div class="hero-meta">
+      <div><b>3 osoby</b>zespół</div>
+      <div><b>~2 tygodnie</b>10 dni roboczych</div>
+      <div><b>Backend only</b>bez frontendu</div>
+      <div><b>Poziom</b>początkujący</div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ================= SPIS TREŚCI ================= -->
+  <aside class="sidebar">
+    <p class="toc-title">Spis treści</p>
+    <ul class="toc" id="toc">
+      <li><a href="#cel">1. Co budujemy</a></li>
+      <li><a href="#jak-dziala">2. Jak to działa</a></li>
+      <li><a href="#stack">3. Stos technologiczny</a></li>
+      <li><a href="#typescript">4. Dlaczego TypeScript</a></li>
+      <li><a href="#architektura">5. Architektura</a></li>
+      <li><a href="#kontrakty">6. Kontrakty danych</a></li>
+      <li><a href="#baza">7. Baza danych</a></li>
+      <li><a href="#rabbit">8. RabbitMQ i niezawodność</a></li>
+      <li><a href="#api">9. REST API</a></li>
+      <li><a href="#repo">10. Struktura repo</a></li>
+      <li><a href="#kod">11. Kod TypeScript</a></li>
+      <li><a href="#docker">12. Docker Compose</a></li>
+      <li><a href="#k8s">13. Kubernetes i Helm</a></li>
+      <li><a href="#terraform">14. Terraform</a></li>
+      <li><a href="#epiki">15. Epiki i zadania</a></li>
+      <li><a href="#zespol">16. Podział pracy</a></li>
+      <li><a href="#plan">17. Plan 10 dni</a></li>
+      <li><a href="#testy">18. Testy</a></li>
+      <li><a href="#demo">19. Scenariusz demo</a></li>
+      <li><a href="#ryzyka">20. Ryzyka</a></li>
+      <li><a href="#yagni">21. Czego nie robimy</a></li>
+      <li><a href="#slowniczek">22. Słowniczek</a></li>
+      <li><a href="#sciaga">23. Ściąga komend</a></li>
+    </ul>
+    <div class="sidebar-tools">
+      <button class="btn print-only" onclick="window.print()">🖨 Drukuj / PDF</button>
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- ================= 1. CEL ================= -->
+    <section class="section" id="cel">
+      <h2><span class="section-num">1.</span>Co budujemy</h2>
+
+      <p class="lead-in">
+        System, do którego wysyłasz zadanie przez HTTP, dostajesz numer zadania, a po chwili odbierasz wynik.
+        Ciężka praca dzieje się w tle, na wielu workerach naraz.
+      </p>
+
+      <div class="card">
+        <p><strong>W jednym zdaniu:</strong> klient wysyła <code>POST /jobs</code>, API zapisuje zadanie
+        w bazie i wrzuca je do kolejki, worker je liczy, a klient pyta <code>GET /jobs/{id}</code> o status i wynik.</p>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <h4>✅ Co będzie działać</h4>
+          <ul>
+            <li>3 endpointy HTTP</li>
+            <li>2 typy zadań: <code>sum</code>, <code>csv_stats</code></li>
+            <li>N workerów liczących równolegle</li>
+            <li>Statusy i wyniki w PostgreSQL</li>
+            <li>Ponawianie nieudanych zadań</li>
+            <li>Skalowanie workerów przez Helm</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>🎓 Czego się nauczycie</h4>
+          <ul>
+            <li>Konteneryzacji (multi-stage build)</li>
+            <li>Komunikacji asynchronicznej</li>
+            <li>Kubernetes: Deployment, Service, Secret</li>
+            <li>Helm: chart + values</li>
+            <li>Terraform: stan i plan</li>
+            <li>Podstaw niezawodności (ack, retry)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>🚫 Czego nie będzie</h4>
+          <ul>
+            <li>Frontendu ani UI</li>
+            <li>Logowania i użytkowników</li>
+            <li>AWS / chmury</li>
+            <li>Mikroserwisów i gRPC</li>
+            <li>Kafki, KEDY, Prometheusa <span class="pill neutral">na start</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="label">Najważniejsza zasada</span>
+        <p>Najpierw ma działać <em>prosty</em> przepływ end-to-end, dopiero potem dodajecie rzeczy.
+        Lepiej oddać 100% prostego systemu niż 60% rozbudowanego.</p>
+      </div>
+    </section>
+
+    <!-- ================= 2. JAK DZIAŁA ================= -->
+    <section class="section" id="jak-dziala">
+      <h2><span class="section-num">2.</span>Jak to działa (po ludzku)</h2>
+
+      <div class="card">
+        <h3 style="margin-top:0">🍽 Analogia: restauracja</h3>
+        <div class="table-wrap" style="box-shadow:none;border:none;margin:0">
+          <table>
+            <tr><th>W restauracji</th><th>W naszym systemie</th><th>Technicznie</th></tr>
+            <tr><td>Kelner przyjmuje zamówienie</td><td>API przyjmuje zadanie</td><td><code>POST /jobs</code></td></tr>
+            <tr><td>Kartka ląduje na sznurku w kuchni</td><td>Zadanie trafia do kolejki</td><td>RabbitMQ</td></tr>
+            <tr><td>Kucharze biorą kartki po kolei</td><td>Workery biorą zadania</td><td>konsumenci kolejki</td></tr>
+            <tr><td>Zeszyt z zamówieniami</td><td>Baza danych</td><td>PostgreSQL</td></tr>
+            <tr><td>Kelner mówi „gotowe”</td><td>Klient widzi status</td><td><code>GET /jobs/{id}</code></td></tr>
+          </table>
+        </div>
+        <p style="margin-bottom:0">Kelner <strong>nie czeka</strong>, aż kucharz skończy. Przyjmuje zamówienie
+        i idzie dalej — dokładnie tak działa asynchroniczność.</p>
+      </div>
+
+      <h3>Cykl życia zadania</h3>
+      <ol class="steps">
+        <li><b>Klient wysyła zadanie.</b> API sprawdza, czy dane są poprawne (np. czy <code>numbers</code> to tablica liczb).</li>
+        <li><b>Powstaje rekord w bazie</b> ze statusem <span class="pill info">pending</span> i nowym UUID.</li>
+        <li><b>API publikuje wiadomość</b> do kolejki RabbitMQ i od razu odpowiada klientowi <code>202 Accepted</code> z ID.</li>
+        <li><b>Worker pobiera wiadomość.</b> Zmienia status na <span class="pill warn">processing</span> i liczy wynik.</li>
+        <li><b>Worker zapisuje wynik</b> i ustawia status <span class="pill ok">completed</span>.</li>
+        <li><b>Worker potwierdza wiadomość</b> (<em>ack</em>) — RabbitMQ może ją usunąć z kolejki.</li>
+        <li><b>Klient pyta o status</b> i odbiera wynik.</li>
+      </ol>
+
+      <div class="state-flow" aria-label="Diagram stanów">
+        <span class="state">pending</span><span class="arrow">→</span>
+        <span class="state">processing</span><span class="arrow">→</span>
+        <span class="state">completed</span>
+        <span style="color:var(--muted);margin-left:.6rem">lub</span>
+        <span class="arrow">→</span><span class="state">failed</span>
+        <span style="color:var(--muted);margin-left:.6rem">a przy retry:</span>
+        <span class="state">failed</span><span class="arrow">↩</span><span class="state">pending</span>
+      </div>
+
+      <div class="note warn">
+        <span class="label">Ważne dla beginnerów</span>
+        <p><strong>TypeScript nie sprawdza danych w runtime.</strong> Typy znikają po kompilacji.
+        Dlatego każde ciało żądania i każdą wiadomość z kolejki sprawdzamy biblioteką <strong>Zod</strong>.
+        Typ = „co programista obiecuje”, Zod = „co faktycznie przyszło przez sieć”.</p>
+      </div>
+    </section>
+
+    <!-- ================= 3. STACK ================= -->
+    <section class="section" id="stack">
+      <h2><span class="section-num">3.</span>Stos technologiczny</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Warstwa</th><th>Technologia</th><th>Po co dokładnie</th><th>Trudność</th></tr>
+          <tr><td>Język</td><td>TypeScript 5 + Node.js 22 LTS</td><td>Jeden język dla API i workera</td><td><span class="pill ok">niska</span></td></tr>
+          <tr><td>HTTP</td><td>Express 5</td><td>Routing, JSON, obsługa błędów</td><td><span class="pill ok">niska</span></td></tr>
+          <tr><td>Walidacja</td><td>Zod 3/4</td><td>Sprawdzanie danych wejściowych i wiadomości</td><td><span class="pill ok">niska</span></td></tr>
+          <tr><td>Baza</td><td>PostgreSQL 16 + <code>pg</code></td><td>Rekordy zadań, statusy, wyniki</td><td><span class="pill warn">średnia</span></td></tr>
+          <tr><td>Kolejka</td><td>RabbitMQ 3.13 + <code>amqplib</code></td><td>Rozdawanie zadań workerom</td><td><span class="pill warn">średnia</span></td></tr>
+          <tr><td>Testy</td><td>Vitest</td><td>Testy jednostkowe i integracyjne</td><td><span class="pill ok">niska</span></td></tr>
+          <tr><td>Kontenery</td><td>Docker + Compose v2</td><td>Lokalne uruchomienie całości</td><td><span class="pill ok">niska</span></td></tr>
+          <tr><td>Klaster</td><td>kind</td><td>Kubernetes w Dockerze, lokalnie</td><td><span class="pill warn">średnia</span></td></tr>
+          <tr><td>Pakowanie</td><td>Helm 3</td><td>Chart z Deploymentami i Service'ami</td><td><span class="pill warn">średnia</span></td></tr>
+          <tr><td>Infra</td><td>Terraform 1.7+</td><td>Namespace + Helm release</td><td><span class="pill warn">średnia</span></td></tr>
+        </table>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>Dlaczego monorepo (npm workspaces)?</h4>
+          <p>API i worker muszą używać <strong>tych samych</strong> typów i nazw pól. Wspólny pakiet
+          <code>packages/shared</code> gwarantuje, że gdy ktoś zmieni format wiadomości, drugi projekt
+          od razu pokaże błąd w edytorze.</p>
+          <p style="margin-bottom:0">To najtańszy sposób, żeby uniknąć „u mnie działa”.</p>
+        </div>
+        <div class="card">
+          <h4>Dlaczego Express, a nie Fastify/NestJS?</h4>
+          <p>Express zna większość materiałów w internecie, ma najmniej „magii” i wystarcza w zupełności.
+          NestJS wprowadza dekoratory, moduły i DI — za dużo pojęć na 2 tygodnie.</p>
+          <p style="margin-bottom:0">Zasada: <strong>najprostsze narzędzie, które spełnia wymagania</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. TYPESCRIPT ================= -->
+    <section class="section" id="typescript">
+      <h2><span class="section-num">4.</span>Dlaczego TypeScript i jak go używamy</h2>
+
+      <p>Jeden język w API i workerze. Typy pomagają pisać kod, ale <strong>nie zastępują walidacji</strong> —
+      dane z sieci zawsze trzeba sprawdzić.</p>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <h4>Jeden język</h4>
+          <p>API i worker dzielą ten sam kontrakt w <code>packages/shared</code>. Zmiana pola
+          w jednym miejscu od razu pokazuje błąd w drugim.</p>
+        </div>
+        <div class="card">
+          <h4>Typy + Zod</h4>
+          <p>TypeScript sprawdza kod podczas pisania, Zod sprawdza dane w czasie działania.
+          Potrzebujecie obu rzeczy.</p>
+        </div>
+        <div class="card">
+          <h4>Szybki start</h4>
+          <p><code>tsx</code> uruchamia TypeScript bez kompilacji, Vitest testuje w sekundę,
+          a npm workspaces trzyma projekt w jednym repo.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Warstwa</th><th>Narzędzie</th><th>Rola</th></tr>
+          <tr><td>Runtime</td><td>Node.js 22 LTS</td><td>Uruchamia kod JavaScript na serwerze</td></tr>
+          <tr><td>Język</td><td>TypeScript 5</td><td>Typy, autouzupełnianie, bezpieczniejszy refaktor</td></tr>
+          <tr><td>Development</td><td><code>tsx</code></td><td>Start bez osobnego kroku kompilacji</td></tr>
+          <tr><td>Produkcja</td><td><code>tsc</code></td><td>Kompiluje do <code>dist/*.js</code>, to uruchamia Docker</td></tr>
+          <tr><td>Walidacja</td><td>Zod</td><td>Sprawdza ciało HTTP i wiadomości z kolejki</td></tr>
+          <tr><td>Testy</td><td>Vitest</td><td>Szybkie testy jednostkowe i integracyjne</td></tr>
+          <tr><td>Pakiety</td><td>npm workspaces</td><td><code>apps/api</code>, <code>apps/worker</code>, <code>packages/shared</code></td></tr>
+        </table>
+      </div>
+
+      <div class="note bad">
+        <span class="label">Pułapka nr 1</span>
+        <p>TypeScript <strong>znika po kompilacji</strong>. Dane, które przychodzą z sieci, mogą być
+        czymkolwiek. Jeśli zrobicie <code>req.body as JobRequest</code>, to nie jest walidacja — to kłamstwo.
+        Zawsze <code>JobRequest.safeParse(req.body)</code>.</p>
+      </div>
+
+      <div class="note">
+        <span class="label">Pułapka nr 2</span>
+        <p>W <code>amqplib</code> handler <code>consume</code> może być asynchroniczny, ale biblioteka
+        nie czeka na Twój <code>Promise</code>. Zawsze opakowujcie ciało w <code>try/catch</code>
+        i sami wołajcie <code>ack</code> / <code>nack</code>. Inaczej błąd zniknie po cichu.</p>
+      </div>
+    </section>
+
+    <!-- ================= 5. ARCHITEKTURA ================= -->
+    <section class="section" id="architektura">
+      <h2><span class="section-num">5.</span>Architektura</h2>
+
+      <div class="card">
+        <svg viewBox="0 0 960 440" role="img" aria-label="Diagram architektury systemu" style="width:100%;height:auto;display:block">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#7a8398"></path>
+            </marker>
+          </defs>
+
+          <!-- klient -->
+          <rect x="20" y="290" width="140" height="80" rx="12" fill="#ffffff" stroke="#c9d0e0"></rect>
+          <text x="90" y="325" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="600" fill="#141824">Klient</text>
+          <text x="90" y="347" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">curl / skrypt</text>
+
+          <!-- api -->
+          <rect x="210" y="280" width="180" height="100" rx="12" fill="#eef0ff" stroke="#b9bcf5"></rect>
+          <text x="300" y="318" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="600" fill="#141824">Job API</text>
+          <text x="300" y="340" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">Node.js + TypeScript</text>
+          <text x="300" y="358" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">Express</text>
+
+          <!-- rabbit -->
+          <rect x="470" y="40" width="190" height="90" rx="12" fill="#fff4e8" stroke="#f0c48f"></rect>
+          <text x="565" y="72" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="600" fill="#141824">RabbitMQ</text>
+          <text x="565" y="94" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">kolejka: jobs</text>
+          <text x="565" y="112" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">+ retry, + dead</text>
+
+          <!-- workers -->
+          <rect x="730" y="40" width="200" height="130" rx="12" fill="#eaf7ef" stroke="#a9d9bd"></rect>
+          <text x="830" y="72" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="600" fill="#141824">Workery 1..N</text>
+          <text x="830" y="95" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">konsumenci kolejki</text>
+          <text x="830" y="115" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">sum · csv_stats</text>
+          <text x="830" y="135" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">skalowane replikami</text>
+
+          <!-- db -->
+          <rect x="470" y="290" width="190" height="95" rx="12" fill="#eef1f7" stroke="#c2cadb"></rect>
+          <text x="565" y="325" text-anchor="middle" font-family="system-ui" font-size="16" font-weight="600" fill="#141824">PostgreSQL</text>
+          <text x="565" y="347" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">tabela jobs</text>
+          <text x="565" y="364" text-anchor="middle" font-family="system-ui" font-size="12" fill="#5b6478">statusy, wyniki</text>
+
+          <!-- strzałki -->
+          <path d="M160,330 L210,330" stroke="#7a8398" stroke-width="2" marker-end="url(#arr)"></path>
+          <text x="185" y="320" text-anchor="middle" font-family="system-ui" font-size="10" fill="#5b6478">POST</text>
+
+          <path d="M300,280 L300,85 L470,85" stroke="#7a8398" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+          <text x="330" y="75" font-family="system-ui" font-size="11" fill="#5b6478">publish</text>
+
+          <path d="M660,85 L730,85" stroke="#7a8398" stroke-width="2" marker-end="url(#arr)"></path>
+          <text x="695" y="75" text-anchor="middle" font-family="system-ui" font-size="11" fill="#5b6478">consume</text>
+
+          <path d="M830,170 L830,337 L660,337" stroke="#7a8398" stroke-width="2" fill="none" marker-end="url(#arr)"></path>
+          <text x="760" y="327" font-family="system-ui" font-size="11" fill="#5b6478">UPDATE</text>
+
+          <path d="M390,330 L470,330" stroke="#7a8398" stroke-width="2" marker-end="url(#arr)"></path>
+          <text x="430" y="318" text-anchor="middle" font-family="system-ui" font-size="10" fill="#5b6478">SQL</text>
+
+          <path d="M730,115 L660,115" stroke="#7a8398" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)"></path>
+          <text x="695" y="132" text-anchor="middle" font-family="system-ui" font-size="10" fill="#5b6478">ack</text>
+        </svg>
+      </div>
+
+      <h3>Komponenty — kto za co odpowiada</h3>
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>1. Job API <span class="pill info">apps/api</span></h4>
+          <p><strong>Robi:</strong> waliduje wejście, tworzy rekord, publikuje wiadomość, odpowiada na pytania o status.</p>
+          <p><strong>Nie robi:</strong> nie liczy zadań, nie dotyka kolejki jako konsument.</p>
+          <p style="margin-bottom:0"><strong>Port:</strong> 3000</p>
+        </div>
+        <div class="card">
+          <h4>2. RabbitMQ <span class="pill warn">infrastruktura</span></h4>
+          <p><strong>Robi:</strong> trzyma wiadomości, rozdaje je workerom, obsługuje retry i dead letter.</p>
+          <p><strong>Nie robi:</strong> nie zna wyniku zadania — tylko je przekazuje.</p>
+          <p style="margin-bottom:0"><strong>Porty:</strong> 5672 (AMQP), 15672 (panel)</p>
+        </div>
+        <div class="card">
+          <h4>3. Worker <span class="pill ok">apps/worker</span></h4>
+          <p><strong>Robi:</strong> pobiera wiadomość, wykonuje operację, zapisuje wynik i status.</p>
+          <p><strong>Nie robi:</strong> nie wystawia HTTP, nie tworzy zadań.</p>
+          <p style="margin-bottom:0"><strong>Skala:</strong> 1..N replik, bez portu</p>
+        </div>
+        <div class="card">
+          <h4>4. PostgreSQL <span class="pill neutral">infrastruktura</span></h4>
+          <p><strong>Robi:</strong> przechowuje prawdę o zadaniu: typ, payload, status, wynik, błąd, czasy.</p>
+          <p><strong>Nie robi:</strong> nie jest kolejką (to częsty błąd początkujących).</p>
+          <p style="margin-bottom:0"><strong>Port:</strong> 5432</p>
+        </div>
+      </div>
+
+      <div class="note warn">
+        <span class="label">Dlaczego baza i kolejka to dwie rzeczy</span>
+        <p>Kolejka jest do <em>przekazywania pracy</em> i jest ulotna. Baza jest do <em>pamiętania stanu</em>
+        i jest trwała. Jeśli worker padnie w połowie, wiadomość wróci do kolejki, ale status w bazie
+        dalej mówi prawdę o tym, co się stało.</p>
+      </div>
+    </section>
+
+    <!-- ================= 6. KONTRAKTY ================= -->
+    <section class="section" id="kontrakty">
+      <h2><span class="section-num">6.</span>Kontrakty danych (najważniejsza rzecz do ustalenia w dniu 1)</h2>
+
+      <p>Zanim ktokolwiek napisze kod, zapiszcie te trzy formaty w <code>packages/shared</code>.
+      To pozwala trzem osobom pracować równolegle bez czekania na siebie.</p>
+
+      <h3>A. Żądanie utworzenia zadania</h3>
+      <div class="code">
+        <div class="code-head"><span>POST /jobs — ciało żądania</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "type": "sum",
+  "payload": {
+    "numbers": [10, 20, 30]
+  }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>POST /jobs — drugi typ zadania</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "type": "csv_stats",
+  "payload": {
+    "csv": "value\n10\n20\n30\n"
+  }
+}</code></pre>
+      </div>
+
+      <h3>B. Wiadomość w RabbitMQ</h3>
+      <p>To jest <strong>osobny</strong> format — nie wysyłamy do kolejki tego samego, co przyszło z HTTP.
+      Dodajemy <code>jobId</code>, numer próby i wersję kontraktu.</p>
+      <div class="code">
+        <div class="code-head"><span>kolejka jobs — wiadomość</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "version": 1,
+  "jobId": "3f1c2a9e-8b7d-4c1a-9f2e-1d4b6a8c0e11",
+  "type": "sum",
+  "payload": { "numbers": [10, 20, 30] },
+  "attempt": 1
+}</code></pre>
+      </div>
+      <p><code>version</code> na start zawsze 1. Jeśli kiedyś zmienicie format, worker będzie umiał
+      odrzucić nieznaną wersję zamiast się wysypać.</p>
+
+      <h3>C. Odpowiedzi API</h3>
+      <div class="grid grid-2">
+        <div class="code">
+          <div class="code-head"><span>202 Accepted</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "id": "3f1c2a9e-8b7d-4c1a-9f2e-1d4b6a8c0e11",
+  "status": "pending"
+}</code></pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span>GET /jobs/{id} — ukończone</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "id": "3f1c2a9e-8b7d-4c1a-9f2e-1d4b6a8c0e11",
+  "type": "sum",
+  "status": "completed",
+  "result": { "sum": 60 },
+  "createdAt": "2026-11-06T10:00:00.000Z",
+  "finishedAt": "2026-11-06T10:00:02.140Z"
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="note goal">
+        <span class="label">Zasada: wynik zawsze obiekt</span>
+        <p>Nawet dla prostego dodawania zwracajcie <code>{"sum": 60}</code>, a nie samo <code>60</code>.
+        Gdy za tydzień dodacie pole <code>count</code>, nie zepsujecie klientów.</p>
+      </div>
+
+      <h3>Typy wyników</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Typ zadania</th><th>Wejście</th><th>Wynik</th><th>Limit</th></tr>
+          <tr><td><code>sum</code></td><td>tablica liczb</td><td><code>{"sum": number}</code></td><td>max 10 000 liczb</td></tr>
+          <tr><td><code>csv_stats</code></td><td>tekst CSV z kolumną <code>value</code></td><td><code>{"count", "sum", "min", "max", "avg"}</code></td><td>max 200 KB, max 10 000 wierszy</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= 7. BAZA ================= -->
+    <section class="section" id="baza">
+      <h2><span class="section-num">7.</span>Baza danych</h2>
+
+      <p>Jedna tabela. Naprawdę. Nie potrzebujecie osobnej tabeli na wyniki ani na historię.</p>
+
+      <div class="code">
+        <div class="code-head"><span>db/migrations/001_init.sql</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>CREATE EXTENSION IF NOT EXISTS pgcrypto;  -- gen_random_uuid()
+
+CREATE TABLE jobs (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type        TEXT NOT NULL,
+  payload     JSONB NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  result      JSONB,
+  error       TEXT,
+  attempts    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  started_at  TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ
+);
+
+CREATE INDEX jobs_status_idx ON jobs (status);
+CREATE INDEX jobs_created_at_idx ON jobs (created_at DESC);</code></pre>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>Dlaczego <code>JSONB</code> na payload i result?</h4>
+          <p>Każdy typ zadania ma inny kształt danych. Jedna kolumna <code>payload</code> obsłuży
+          i sumę, i CSV, bez migracji przy dodaniu nowego typu.</p>
+          <p style="margin-bottom:0">Walidację i tak robi Zod, więc baza nie musi znać wszystkich pól.</p>
+        </div>
+        <div class="card">
+          <h4>Dlaczego <code>attempts</code>?</h4>
+          <p>Worker zwiększa licznik przy każdej próbie. Gdy osiągnie 3, zadanie idzie do
+          <code>failed</code> i do kolejki dead letter — zamiast kręcić się w nieskończoność.</p>
+          <p style="margin-bottom:0">To zabezpieczenie przed „trującą wiadomością”.</p>
+        </div>
+      </div>
+
+      <h3>Przykładowe zapytania</h3>
+      <div class="code">
+        <div class="code-head"><span>SQL — to, co naprawdę będziecie pisać</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>-- utworzenie zadania
+INSERT INTO jobs (type, payload)
+VALUES ($1, $2)
+RETURNING id, status, created_at;
+
+-- pobranie statusu
+SELECT id, type, status, result, error, created_at, finished_at
+FROM jobs
+WHERE id = $1;
+
+-- zajęcie zadania przez workera (idempotentnie!)
+UPDATE jobs
+SET status = 'processing', started_at = now(), attempts = attempts + 1
+WHERE id = $1 AND status = 'pending'
+RETURNING id;
+
+-- zapis wyniku
+UPDATE jobs
+SET status = 'completed', result = $2, finished_at = now()
+WHERE id = $1;</code></pre>
+      </div>
+
+      <div class="note ok">
+        <span class="label">Sztuczka, którą warto zapamiętać</span>
+        <p><code>UPDATE ... WHERE id = $1 AND status = 'pending' RETURNING id</code> to jednoczesne
+        „sprawdź i zajmij”. Jeśli RabbitMQ dostarczy tę samą wiadomość dwa razy, drugi worker
+        dostanie <code>rowCount = 0</code> i po prostu potwierdzi wiadomość bez liczenia.
+        To jest cała idempotencja, jakiej potrzebujecie.</p>
+      </div>
+    </section>
+
+    <!-- ================= 8. RABBIT ================= -->
+    <section class="section" id="rabbit">
+      <h2><span class="section-num">8.</span>RabbitMQ i niezawodność</h2>
+
+      <h3>Trzy kolejki</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Kolejka</th><th>Do czego</th><th>Ustawienia</th></tr>
+          <tr><td><code>jobs</code></td><td>Normalna praca</td><td>durable, wiadomości persistent</td></tr>
+          <tr><td><code>jobs.retry</code></td><td>Ponowienie po błędzie</td><td><code>x-message-ttl = 10000</code>, dead-letter z powrotem do <code>jobs</code></td></tr>
+          <tr><td><code>jobs.dead</code></td><td>Zadania po 3 nieudanych próbach</td><td>do ręcznego obejrzenia w panelu</td></tr>
+        </table>
+      </div>
+
+      <h3>Zasady, które muszą być spełnione</h3>
+      <ol>
+        <li><strong>Ack dopiero po zapisie do bazy.</strong> Jeśli potwierdzicie wiadomość przed
+        <code>UPDATE</code>, a baza padnie — zadanie zniknie na zawsze.</li>
+        <li><strong>Prefetch = 1.</strong> Worker bierze jedno zadanie naraz. Prościej i sprawiedliwiej.</li>
+        <li><strong>Błąd = retry, nie <code>nack(requeue: true)</code>.</strong> Natychmiastowe requeue
+        tworzy pętlę, która zjada CPU, gdy zadanie jest trwale zepsute.</li>
+        <li><strong>Po 3 próbach → <code>failed</code> + dead letter.</strong> Zapisujemy treść błędu w kolumnie <code>error</code>.</li>
+      </ol>
+
+      <h3>Jak wygląda retry w praktyce</h3>
+      <ol class="steps">
+        <li><b>Worker łapie wyjątek.</b> Nie potwierdza „sukcesu”.</li>
+        <li><b>Sprawdza <code>attempt</code>.</b> Jeśli mniejszy niż 3 — publikuje kopię wiadomości
+        do <code>jobs.retry</code> z <code>attempt + 1</code> i dopiero potem robi <code>ack</code> oryginału.</li>
+        <li><b>Kolejka retry trzyma wiadomość 10 sekund</b>, po czym sama przekazuje ją z powrotem do <code>jobs</code>.</li>
+        <li><b>Po trzeciej porażce</b> worker ustawia status <code>failed</code>, zapisuje błąd i publikuje do <code>jobs.dead</code>.</li>
+      </ol>
+
+      <div class="note warn">
+        <span class="label">Czego nie obiecujecie</span>
+        <p>Nie ma „dokładnie jednego” przetworzenia. RabbitMQ może dostarczyć wiadomość dwa razy.
+        Wasza obrona to idempotentny <code>UPDATE ... WHERE status = 'pending'</code>.
+        Na prezentacji mówcie o tym głośno — to pokazuje zrozumienie tematu, nie słabość.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>apps/worker/src/consumer.ts — szkielet</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import type { Channel, ConsumeMessage } from "amqplib";
+
+export async function startConsumer(channel: Channel) {
+  await channel.prefetch(1);
+
+  await channel.consume("jobs", async (msg: ConsumeMessage | null) => {
+    if (!msg) return;
+
+    try {
+      const job = JobMessage.parse(JSON.parse(msg.content.toString()));
+
+      // "sprawdź i zajmij" — ochrona przed duplikatem
+      const claimed = await pool.query(
+        `UPDATE jobs SET status = 'processing',
+                          started_at = now(),
+                          attempts = attempts + 1
+         WHERE id = $1 AND status = 'pending'
+         RETURNING id`,
+        [job.jobId],
+      );
+
+      if (claimed.rowCount === 0) {
+        channel.ack(msg); // już zrobione albo w toku
+        return;
+      }
+
+      const result = await runHandler(job);
+
+      await pool.query(
+        `UPDATE jobs SET status = 'completed', result = $2, finished_at = now()
+         WHERE id = $1`,
+        [job.jobId, result],
+      );
+
+      channel.ack(msg);
+    } catch (err) {
+      await handleFailure(channel, msg, err);
+    }
+  }, { noAck: false });
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================= 9. API ================= -->
+    <section class="section" id="api">
+      <h2><span class="section-num">9.</span>REST API</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Metoda</th><th>Ścieżka</th><th>Kod sukcesu</th><th>Opis</th></tr>
+          <tr><td><span class="pill info">POST</span></td><td><code>/jobs</code></td><td>202</td><td>Utwórz zadanie, zwróć ID</td></tr>
+          <tr><td><span class="pill ok">GET</span></td><td><code>/jobs/{id}</code></td><td>200</td><td>Status, wynik lub błąd</td></tr>
+          <tr><td><span class="pill neutral">GET</span></td><td><code>/health</code></td><td>200</td><td>Sprawdzenie dla Kubernetes probes</td></tr>
+        </table>
+      </div>
+
+      <h3>Przykłady <code>curl</code></h3>
+      <div class="code">
+        <div class="code-head"><span>terminal</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code># 1. Wyślij zadanie
+curl -s -X POST http://localhost:3000/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"sum","payload":{"numbers":[10,20,30]}}'
+# => {"id":"3f1c...","status":"pending"}
+
+# 2. Sprawdź status (wstaw swoje ID)
+curl -s http://localhost:3000/jobs/3f1c2a9e-8b7d-4c1a-9f2e-1d4b6a8c0e11
+# => {"id":"3f1c...","status":"completed","result":{"sum":60},...}
+
+# 3. Health check
+curl -s http://localhost:3000/health
+# => {"status":"ok"}</code></pre>
+      </div>
+
+      <h3>Kody błędów</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Kod</th><th>Kiedy</th><th>Przykładowa odpowiedź</th></tr>
+          <tr><td>400</td><td>Zły JSON albo walidacja Zod nie przeszła</td><td><code>{"error":"invalid_request","details":[...]}</code></td></tr>
+          <tr><td>404</td><td>Nie ma zadania o takim ID</td><td><code>{"error":"not_found"}</code></td></tr>
+          <tr><td>503</td><td>Brak połączenia z bazą lub kolejką</td><td><code>{"error":"unavailable"}</code></td></tr>
+          <tr><td>500</td><td>Nieoczekiwany błąd — logujcie stack trace</td><td><code>{"error":"internal"}</code></td></tr>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="label">Szczegół</span>
+        <p>404 dla złego UUID to też 404, nie 500. Niech walidacja parametru ścieżki
+        (<code>z.string().uuid()</code>) zwraca 400, a brak rekordu — 404.</p>
+      </div>
+    </section>
+
+    <!-- ================= 10. REPO ================= -->
+    <section class="section" id="repo">
+      <h2><span class="section-num">10.</span>Struktura repozytorium</h2>
+
+      <div class="tree">
+<pre style="margin:0;background:none;padding:0;color:inherit">projekt/
+├── apps/
+│   ├── api/                      <span class="c"># REST API (Express)</span>
+│   │   ├── src/
+│   │   │   ├── index.ts          <span class="c"># start serwera</span>
+│   │   │   ├── app.ts            <span class="c"># konfiguracja Express (testowalna)</span>
+│   │   │   ├── config.ts         <span class="c"># env + walidacja Zod</span>
+│   │   │   ├── db.ts             <span class="c"># Pool z pg</span>
+│   │   │   ├── queue.ts          <span class="c"># publish do RabbitMQ</span>
+│   │   │   └── routes/jobs.ts    <span class="c"># POST /jobs, GET /jobs/:id</span>
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   └── worker/                   <span class="c"># konsument kolejki</span>
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── consumer.ts
+│       │   ├── db.ts
+│       │   ├── failures.ts       <span class="c"># retry + dead letter</span>
+│       │   └── handlers/
+│       │       ├── sum.ts
+│       │       └── csvStats.ts
+│       ├── Dockerfile
+│       └── package.json
+├── packages/
+│   └── shared/                   <span class="c"># wspólny kontrakt</span>
+│       ├── src/
+│       │   ├── contracts.ts      <span class="c"># schematy Zod</span>
+│       │   ├── messages.ts       <span class="c"># format wiadomości</span>
+│       │   └── queues.ts         <span class="c"># nazwy kolejek w jednym miejscu</span>
+│       └── package.json
+├── db/migrations/001_init.sql
+├── infra/
+│   ├── helm/job-system/          <span class="c"># chart</span>
+│   │   ├── Chart.yaml
+│   │   ├── values.yaml
+│   │   └── templates/
+│   └── terraform/                <span class="c"># namespace + helm release</span>
+│       ├── main.tf
+│       ├── variables.tf
+│       └── values.yaml
+├── scripts/
+│   ├── demo.sh                   <span class="c"># wysyła 100 zadań</span>
+│   └── kind-up.sh
+├── docker-compose.yml
+├── package.json                  <span class="c"># workspaces</span>
+├── tsconfig.base.json
+└── README.md</pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>package.json (główny)</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>{
+  "name": "job-system",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:api": "npm run dev -w @jobs/api",
+    "dev:worker": "npm run dev -w @jobs/worker",
+    "build": "npm run build -w @jobs/shared && npm run build -w @jobs/api && npm run build -w @jobs/worker",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "tsc -b"
+  }
+}</code></pre>
+      </div>
+
+      <div class="note">
+        <span class="label">Dlaczego <code>app.ts</code> osobno od <code>index.ts</code></span>
+        <p>W <code>app.ts</code> budujecie aplikację Express i ją eksportujecie. W <code>index.ts</code>
+        tylko ją uruchamiacie. Dzięki temu testy mogą zaimportować <code>app</code> i wysłać żądanie
+        bez otwierania prawdziwego portu.</p>
+      </div>
+
+      <div class="note">
+        <span class="label">Import <code>@jobs/shared</code></span>
+        <p>Żeby import działał, w <code>packages/shared/package.json</code> ustawcie
+        <code>"main": "dist/index.js"</code> oraz <code>"types": "dist/index.d.ts"</code>,
+        a w <code>scripts</code> dodajcie <code>"build": "tsc -p tsconfig.json"</code>.
+        Podczas developmentu uruchamiajcie <code>npm run build -w @jobs/shared</code> po każdej zmianie
+        kontraktu (albo użyjcie <code>tsc --watch</code>).</p>
+      </div>
+    </section>
+
+    <!-- ================= 11. KOD ================= -->
+    <section class="section" id="kod">
+      <h2><span class="section-num">11.</span>Kod TypeScript — najważniejsze fragmenty</h2>
+
+      <p>Te cztery pliki to 80% projektu. Reszta to ich odmiany.</p>
+
+      <h3>11.1 Wspólny kontrakt</h3>
+      <div class="code">
+        <div class="code-head"><span>packages/shared/src/contracts.ts</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import { z } from "zod";
+
+// --- payloady poszczególnych typów zadań ---
+export const SumPayload = z.object({
+  numbers: z.array(z.number().finite()).min(1).max(10_000),
+});
+
+export const CsvPayload = z.object({
+  csv: z.string().min(1).max(200_000),
+});
+
+// --- żądanie HTTP: type decyduje o kształcie payloadu ---
+export const JobRequest = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("sum"), payload: SumPayload }),
+  z.object({ type: z.literal("csv_stats"), payload: CsvPayload }),
+]);
+
+export type JobRequest = z.infer&lt;typeof JobRequest&gt;;
+export type JobType = JobRequest["type"];
+
+// --- wiadomość w RabbitMQ ---
+export const JobMessage = z.object({
+  version: z.literal(1),
+  jobId: z.string().uuid(),
+  type: z.enum(["sum", "csv_stats"]),
+  payload: z.record(z.string(), z.unknown()),
+  attempt: z.number().int().min(1).max(3),
+});
+
+export type JobMessage = z.infer&lt;typeof JobMessage&gt;;</code></pre>
+      </div>
+
+      <p><code>z.infer</code> tworzy typ TypeScript <em>ze schematu</em>. Nie piszecie typu drugi raz —
+      jedno źródło prawdy. Gdy zmienicie schemat, edytor od razu pokaże, gdzie kod się zepsuje.</p>
+
+      <h3>11.2 Endpoint POST /jobs</h3>
+      <div class="code">
+        <div class="code-head"><span>apps/api/src/routes/jobs.ts</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import { Router } from "express";
+import { JobRequest } from "@jobs/shared";
+import { pool } from "../db.js";
+import { publishJob } from "../queue.js";
+
+export const jobsRouter = Router();
+
+jobsRouter.post("/jobs", async (req, res) =&gt; {
+  const parsed = JobRequest.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "invalid_request",
+      details: parsed.error.issues,
+    });
+  }
+
+  const job = parsed.data;
+
+  const { rows } = await pool.query(
+    `INSERT INTO jobs (type, payload)
+     VALUES ($1, $2)
+     RETURNING id, status`,
+    [job.type, job.payload],
+  );
+
+  const created = rows[0];
+
+  await publishJob({
+    version: 1,
+    jobId: created.id,
+    type: job.type,
+    payload: job.payload,
+    attempt: 1,
+  });
+
+  return res.status(202).json({ id: created.id, status: created.status });
+});
+
+jobsRouter.get("/jobs/:id", async (req, res) =&gt; {
+  const id = req.params.id;
+
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return res.status(400).json({ error: "invalid_id" });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT id, type, status, result, error, created_at, finished_at
+     FROM jobs WHERE id = $1`,
+    [id],
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const row = rows[0];
+  return res.json({
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    result: row.result,
+    error: row.error,
+    createdAt: row.created_at,
+    finishedAt: row.finished_at,
+  });
+});</code></pre>
+      </div>
+
+      <h3>11.3 Publikowanie do kolejki</h3>
+      <div class="code">
+        <div class="code-head"><span>apps/api/src/queue.ts</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import amqp from "amqplib";
+import type { JobMessage } from "@jobs/shared";
+
+let channel: amqp.Channel;
+
+export async function connectQueue(url: string) {
+  const conn = await amqp.connect(url);
+  channel = await conn.createChannel();
+
+  // kolejki muszą istnieć, zanim ktoś opublikuje
+  await channel.assertQueue("jobs", { durable: true });
+  await channel.assertQueue("jobs.retry", {
+    durable: true,
+    arguments: {
+      "x-message-ttl": 10_000,
+      "x-dead-letter-exchange": "",
+      "x-dead-letter-routing-key": "jobs",
+    },
+  });
+  await channel.assertQueue("jobs.dead", { durable: true });
+}
+
+export async function publishJob(message: JobMessage) {
+  channel.publish(
+    "",                 // domyślny exchange
+    "jobs",             // routing key = nazwa kolejki
+    Buffer.from(JSON.stringify(message)),
+    { persistent: true, contentType: "application/json" },
+  );
+}</code></pre>
+      </div>
+
+      <h3>11.4 Handler zadania</h3>
+      <div class="code">
+        <div class="code-head"><span>apps/worker/src/handlers/sum.ts</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import type { JobMessage } from "@jobs/shared";
+
+export function runSum(job: JobMessage) {
+  const numbers = job.payload.numbers;
+
+  if (!Array.isArray(numbers)) {
+    throw new Error("payload.numbers must be an array");
+  }
+
+  const sum = numbers.reduce((acc, n) =&gt; acc + Number(n), 0);
+  return { sum };
+}</code></pre>
+      </div>
+
+      <div class="note ok">
+        <span class="label">Dobra praktyka</span>
+        <p>Handler jest <strong>czystą funkcją</strong> — dostaje dane, zwraca wynik, nic nie wie o bazie
+        ani o RabbitMQ. Dzięki temu test jednostkowy to trzy linijki, bez Dockera.</p>
+      </div>
+    </section>
+
+    <!-- ================= 12. DOCKER ================= -->
+    <section class="section" id="docker">
+      <h2><span class="section-num">12.</span>Docker Compose — lokalny rozwój</h2>
+
+      <div class="code">
+        <div class="code-head"><span>docker-compose.yml</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jobs
+      POSTGRES_PASSWORD: jobs
+      POSTGRES_DB: jobs
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobs"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://jobs:jobs@postgres:5432/jobs
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672
+      PORT: "3000"
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  worker:
+    build: { context: ., dockerfile: apps/worker/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://jobs:jobs@postgres:5432/jobs
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672
+    deploy:
+      replicas: 3
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+volumes:
+  pgdata:</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>apps/api/Dockerfile — multi-stage</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>FROM node:22-alpine AS build
+WORKDIR /app
+COPY . .
+RUN npm ci
+RUN npm run build
+
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/shared/package.json ./packages/shared/
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/package.json ./apps/api/
+USER node
+EXPOSE 3000
+CMD ["node", "apps/api/dist/index.js"]</code></pre>
+      </div>
+
+      <div class="note warn">
+        <span class="label">Najczęstszy problem</span>
+        <p>API startuje szybciej niż PostgreSQL i dostaje <code>ECONNREFUSED</code>.
+        Dlatego są <code>healthcheck</code> i <code>depends_on: condition: service_healthy</code>.
+        Dodatkowo warto w kodzie zrobić 5 prób połączenia z odstępem 2 s.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>uruchomienie</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>docker compose up --build -d
+docker compose ps
+docker compose logs -f worker
+docker compose down          # zachowuje wolumen z danymi
+docker compose down -v       # usuwa też dane bazy</code></pre>
+      </div>
+    </section>
+
+    <!-- ================= 13. K8S ================= -->
+    <section class="section" id="k8s">
+      <h2><span class="section-num">13.</span>Kubernetes i Helm</h2>
+
+      <h3>Kolejność pracy</h3>
+      <ol class="steps">
+        <li><b>kind create cluster</b> — klaster jednorazowy, tworzony CLI, nie przez Terraform.</li>
+        <li><b>Obrazy do klastra</b> — <code>docker build</code>, potem <code>kind load docker-image</code>.
+        Bez rejestru, bez chmury.</li>
+        <li><b>Surowy YAML</b> — najpierw ręcznie: Deployment, Service, Secret. Zrozumcie każdy zasób.</li>
+        <li><b>Helm chart</b> — dopiero gdy YAML działa. Zamieńcie powtarzalne fragmenty na szablony.</li>
+        <li><b>Terraform</b> — na końcu, żeby odtworzyć całość jedną komendą.</li>
+      </ol>
+
+      <div class="note">
+        <span class="label">Dlaczego taka kolejność</span>
+        <p>Jeśli zaczniecie od Helma i Terraforma, będziecie debugować trzy warstwy naraz.
+        Najpierw musi działać <code>kubectl apply</code> — wtedy wiecie, że problem jest w szablonie,
+        a nie w aplikacji.</p>
+      </div>
+
+      <h3>Zasoby, które powstają</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Zasób</th><th>Dla kogo</th><th>Uwagi</th></tr>
+          <tr><td><code>Namespace</code></td><td>wszystko</td><td><code>jobs</code></td></tr>
+          <tr><td><code>Deployment</code> + <code>Service</code></td><td>API</td><td>Service typu ClusterIP, port 3000</td></tr>
+          <tr><td><code>Deployment</code></td><td>worker</td><td><code>replicas</code> z values, bez Service</td></tr>
+          <tr><td><code>Secret</code></td><td>hasła</td><td><code>DATABASE_URL</code>, <code>AMQP_URL</code></td></tr>
+          <tr><td><code>StatefulSet</code> + <code>PVC</code> + <code>Service</code></td><td>PostgreSQL</td><td>trwałe dane, 1 replika</td></tr>
+          <tr><td><code>StatefulSet</code> + <code>Service</code></td><td>RabbitMQ</td><td>używamy gotowego obrazu</td></tr>
+          <tr><td><code>ConfigMap</code></td><td>konfiguracja</td><td>nazwy kolejek, limity</td></tr>
+        </table>
+      </div>
+
+      <h3>Probes — bez tego Kubernetes nie wie, czy aplikacja żyje</h3>
+      <div class="code">
+        <div class="code-head"><span>fragment Deploymentu API</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>containers:
+  - name: api
+    image: job-system/api:0.1.0
+    imagePullPolicy: IfNotPresent
+    ports:
+      - containerPort: 3000
+    envFrom:
+      - secretRef:
+          name: job-system-secrets
+    readinessProbe:
+      httpGet: { path: /health, port: 3000 }
+      initialDelaySeconds: 3
+      periodSeconds: 5
+    livenessProbe:
+      httpGet: { path: /health, port: 3000 }
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits:   { cpu: 500m, memory: 256Mi }</code></pre>
+      </div>
+
+      <h3>Helm — co ma być konfigurowalne</h3>
+      <div class="code">
+        <div class="code-head"><span>infra/helm/job-system/values.yaml</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>api:
+  image:
+    repository: job-system/api
+    tag: "0.1.0"
+  replicas: 1
+
+worker:
+  image:
+    repository: job-system/worker
+    tag: "0.1.0"
+  replicas: 3          # <- to zmieniacie na demo
+  maxAttempts: 3
+
+postgres:
+  storage: 1Gi
+  user: jobs
+  database: jobs
+
+rabbitmq:
+  enabled: true</code></pre>
+      </div>
+
+      <p>Cała trudność Helma to <code>{{ .Values.worker.replicas }}</code> w szablonie.
+      Reszta to powtarzanie tego samego wzorca. Nie musicie robić subchartów ani bibliotek.</p>
+
+      <div class="code">
+        <div class="code-head"><span>podstawowe komendy</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>kind create cluster --name jobs --config kind-config.yaml
+docker build -t job-system/api:0.1.0 -f apps/api/Dockerfile .
+docker build -t job-system/worker:0.1.0 -f apps/worker/Dockerfile .
+kind load docker-image job-system/api:0.1.0 --name jobs
+kind load docker-image job-system/worker:0.1.0 --name jobs
+
+kubectl get pods -n jobs
+kubectl logs -n jobs deploy/api
+kubectl port-forward -n jobs svc/api 3000:3000</code></pre>
+      </div>
+    </section>
+
+    <!-- ================= 14. TERRAFORM ================= -->
+    <section class="section" id="terraform">
+      <h2><span class="section-num">14.</span>Terraform</h2>
+
+      <p>Terraform <strong>nie tworzy klastra</strong>. Klaster robi <code>kind</code>.
+      Terraform tworzy namespace i instaluje Helm chart. To celowo prosty zakres.</p>
+
+      <div class="code">
+        <div class="code-head"><span>infra/terraform/main.tf</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>terraform {
+  required_version = ">= 1.7"
+  required_providers {
+    kubernetes = { source = "hashicorp/kubernetes", version = "~> 2.30" }
+    helm       = { source = "hashicorp/helm",       version = "~> 2.13" }
+  }
+}
+
+provider "kubernetes" {
+  config_path = "~/.kube/config"
+}
+
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+}
+
+resource "kubernetes_namespace" "jobs" {
+  metadata { name = "jobs" }
+}
+
+resource "helm_release" "jobs" {
+  name       = "job-system"
+  chart      = "${path.module}/../helm/job-system"
+  namespace  = kubernetes_namespace.jobs.metadata[0].name
+  values     = [file("${path.module}/values.yaml")]
+
+  set {
+    name  = "worker.replicas"
+    value = var.worker_replicas
+  }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>infra/terraform/variables.tf</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>variable "worker_replicas" {
+  description = "Liczba replik workera"
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.worker_replicas &gt;= 1 &amp;&amp; var.worker_replicas &lt;= 20
+    error_message = "Repliki muszą być w zakresie 1-20."
+  }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>workflow</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>cd infra/terraform
+terraform init
+terraform fmt
+terraform validate
+terraform plan      # zawsze przeczytajcie, co zniknie
+terraform apply
+terraform output
+
+# skalowanie workerów na demo:
+terraform apply -var="worker_replicas=5"
+
+# sprzątanie (najpierw to, potem klaster)
+terraform destroy
+kind delete cluster --name jobs</code></pre>
+      </div>
+
+      <div class="note bad">
+        <span class="label">Uwaga na zniszczenie danych</span>
+        <p><code>terraform destroy</code> usunie PVC z PostgreSQL, jeśli jest w namespace.
+        Na demo to bez znaczenia, ale nie trzymajcie tam niczego, czego nie da się odtworzyć.</p>
+      </div>
+
+      <div class="note">
+        <span class="label">Stan Terraforma</span>
+        <p><code>terraform.tfstate</code> zawiera dane o infrastrukturze. Dodajcie go do
+        <code>.gitignore</code> (lokalny klaster, bez backendu zdalnego). Jeśli ktoś sklonuje repo,
+        zacznie od <code>terraform init</code> — i to jest poprawne.</p>
+      </div>
+    </section>
+
+    <!-- ================= 15. EPIKI ================= -->
+    <section class="section" id="epiki">
+      <h2><span class="section-num">15.</span>Epiki i zadania z kryteriami akceptacji</h2>
+
+      <p>Każde zadanie ma <strong>kryteria akceptacji</strong> (checklisty). Zadanie jest zrobione,
+      gdy wszystkie punkty są odhaczone — nie gdy „prawie działa”.</p>
+      <p style="font-size:.9rem;color:var(--muted)">
+        Rozmiary: <span class="pill ok">S</span> do 2 h ·
+        <span class="pill warn">M</span> pół dnia ·
+        <span class="pill bad">L</span> cały dzień
+      </p>
+
+      <div style="display:flex;gap:.5rem;margin:.8rem 0 0">
+        <button class="btn" type="button" onclick="document.querySelectorAll('#epiki details.epic').forEach(d=>d.open=true)">Rozwiń wszystko</button>
+        <button class="btn" type="button" onclick="document.querySelectorAll('#epiki details.epic').forEach(d=>d.open=false)">Zwiń wszystko</button>
+      </div>
+
+      <!-- EPIC 1 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 1</span>
+          <span class="epic-title">Fundamenty projektu</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: repo, kontrakt i środowisko, w którym da się pracować równolegle.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">SET-1</span><span class="task-title">Repozytorium i monorepo</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li><code>npm install</code> na czystym klonie kończy się sukcesem</li>
+              <li>Działa <code>npm run typecheck</code> i <code>npm run build</code></li>
+              <li>Są 3 workspace'y: api, worker, shared</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">SET-2</span><span class="task-title">Kontrakt danych w <code>packages/shared</code></span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Istnieją schematy: <code>JobRequest</code>, <code>JobMessage</code>, <code>JobMessage.parse</code></li>
+              <li>Nazwy kolejek są stałymi, nie stringami rozsianymi po kodzie</li>
+              <li>Test: poprawna wiadomość przechodzi, brak <code>jobId</code> jest odrzucony</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">SET-3</span><span class="task-title">README + diagram</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>README ma: opis, diagram, wymagania, 3 komendy startowe</li>
+              <li>Nowa osoba uruchamia projekt bez pytań do zespołu</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">SET-4</span><span class="task-title">Compose z samą infrastrukturą</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>docker compose up postgres rabbitmq</code> podnosi oba serwisy</li>
+              <li><code>psql</code> łączy się z bazą, panel RabbitMQ otwiera się na 15672</li>
+              <li>Migracja <code>001_init.sql</code> wykonuje się automatycznie</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 2 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 2</span>
+          <span class="epic-title">Job API</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: przyjąć zadanie, zapisać je i oddać klientowi ID.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-1</span><span class="task-title">Szkielet Express + <code>/health</code></span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>GET /health</code> zwraca 200 i <code>{"status":"ok"}</code></li>
+              <li>Serwer startuje z <code>npm run dev:api</code></li>
+              <li>Nieznana ścieżka zwraca 404 w JSON</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-2</span><span class="task-title">Połączenie z PostgreSQL</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Pool tworzony raz, na starcie aplikacji</li>
+              <li>Brak <code>DATABASE_URL</code> zatrzymuje aplikację z czytelnym błędem</li>
+              <li><code>/health</code> sprawdza też bazę (albo osobny <code>/health/ready</code>)</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-3</span><span class="task-title"><code>POST /jobs</code></span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Poprawne żądanie zwraca 202 z <code>id</code> i <code>status: pending</code></li>
+              <li>Rekord naprawdę istnieje w bazie po odpowiedzi</li>
+              <li>Niepoprawne ciało zwraca 400 z listą błędów Zod</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-4</span><span class="task-title"><code>GET /jobs/:id</code></span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Istniejące ID zwraca 200 i wszystkie pola</li>
+              <li>Nieistniejące ID zwraca 404</li>
+              <li>Zły format ID zwraca 400</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-5</span><span class="task-title">Walidacja i obsługa błędów</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Globalny error handler łapie wyjątki i zwraca JSON</li>
+              <li>Błąd bazy nie wycieka do klienta (bez stack trace w odpowiedzi)</li>
+              <li>Każdy błąd jest logowany z kontekstem</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">API-6</span><span class="task-title">Przykłady użycia</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>W README są 3 komendy <code>curl</code> (create, get, health)</li>
+              <li>Jest <code>scripts/demo.sh</code>, który wysyła 100 zadań</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 3 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 3</span>
+          <span class="epic-title">Przetwarzanie zadań</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: worker odbiera z kolejki, liczy i zapisuje wynik.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-1</span><span class="task-title">Deklaracja kolejek</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Trzy kolejki: <code>jobs</code>, <code>jobs.retry</code>, <code>jobs.dead</code></li>
+              <li>Wszystkie <code>durable</code>, wiadomości <code>persistent</code></li>
+              <li>Restart RabbitMQ nie gubi kolejki</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-2</span><span class="task-title">Publikacja z API</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Po <code>POST /jobs</code> wiadomość jest widoczna w panelu RabbitMQ</li>
+              <li>Wiadomość przechodzi <code>JobMessage.parse</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-3</span><span class="task-title">Worker i pętla konsumenta</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Worker łączy się z RabbitMQ i PostgreSQL przy starcie</li>
+              <li><code>prefetch(1)</code> ustawione</li>
+              <li>Log pokazuje odebranie wiadomości</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-4</span><span class="task-title">Handler <code>sum</code></span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>[10,20,30]</code> daje <code>{"sum":60}</code></li>
+              <li>Pusta tablica jest odrzucona przez walidację, nie przez crash</li>
+              <li>Test jednostkowy przechodzi</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-5</span><span class="task-title">Handler <code>csv_stats</code></span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Liczy count, sum, min, max, avg z kolumny <code>value</code></li>
+              <li>Nagłówek jest pomijany</li>
+              <li>Błędny wiersz daje czytelny błąd, nie <code>NaN</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-6</span><span class="task-title">Statusy i idempotencja</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Status przechodzi pending → processing → completed</li>
+              <li>Duplikat wiadomości nie liczy zadania drugi raz</li>
+              <li><code>attempts</code> rośnie przy każdej próbie</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">JOB-7</span><span class="task-title">Retry i dead letter</span><span class="pill bad">L</span></div>
+            <ul class="ac">
+              <li>Błąd w handlerze powoduje ponowienie po ~10 s</li>
+              <li>Po 3 próbach status to <code>failed</code>, a treść błędu jest w bazie</li>
+              <li>Wiadomość trafia do <code>jobs.dead</code></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 4 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 4</span>
+          <span class="epic-title">Docker</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: jedna komenda uruchamia cały system.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">DOC-1</span><span class="task-title">Dockerfile API</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Multi-stage, finalny obraz na <code>node:22-alpine</code></li>
+              <li>Uruchamia się jako użytkownik <code>node</code></li>
+              <li>Obraz waży mniej niż ~250 MB</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">DOC-2</span><span class="task-title">Dockerfile workera</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Obraz startuje i łączy się z kolejką</li>
+              <li>Nie zawiera zbędnych narzędzi deweloperskich</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">DOC-3</span><span class="task-title">Compose z 4 usługami</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li><code>docker compose up --build</code> podnosi postgres, rabbitmq, api, worker</li>
+              <li>Worker ma 3 repliki</li>
+              <li>Dane Postgresa przetrwają <code>docker compose down</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">DOC-4</span><span class="task-title">Weryfikacja komunikacji</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Zadanie wysłane z hosta kończy się <code>completed</code></li>
+              <li>Logi workera pokazują przetworzenie</li>
+              <li>Restart workera nie gubi zadań</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 5 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 5</span>
+          <span class="epic-title">Kubernetes i Helm</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: to samo, ale w klastrze, z automatycznym restartem i skalowaniem.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-1</span><span class="task-title">Klaster kind</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>scripts/kind-up.sh</code> tworzy klaster o nazwie <code>jobs</code></li>
+              <li>Konfiguracja mapuje port 3000 na hosta (albo używacie port-forward)</li>
+              <li><code>kubectl get nodes</code> pokazuje <code>Ready</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-2</span><span class="task-title">API w klastrze</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Deployment + Service działają</li>
+              <li>Probes są skonfigurowane</li>
+              <li><code>kubectl port-forward</code> pozwala wysłać zadanie</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-3</span><span class="task-title">Worker w klastrze</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>3 repliki działają i konsumują kolejkę</li>
+              <li><code>kubectl delete pod</code> powoduje odtworzenie poda</li>
+              <li>Zadania nie giną przy restarcie</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-4</span><span class="task-title">PostgreSQL ze storage</span><span class="pill bad">L</span></div>
+            <ul class="ac">
+              <li>StatefulSet + PVC + headless Service</li>
+              <li>Dane przetrwają usunięcie poda</li>
+              <li>API łączy się przez nazwę serwisu, nie IP</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-5</span><span class="task-title">RabbitMQ w klastrze</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>StatefulSet + Service, panel dostępny przez port-forward</li>
+              <li>Kolejki przetrwają restart poda</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-6</span><span class="task-title">Secret i ConfigMap</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Hasła nie są w obrazie ani w repo</li>
+              <li>Podstawienie przez <code>secretKeyRef</code> / <code>envFrom</code></li>
+              <li>Brak sekretów w <code>kubectl describe pod</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-7</span><span class="task-title">Helm chart</span><span class="pill bad">L</span></div>
+            <ul class="ac">
+              <li><code>helm lint</code> i <code>helm template</code> przechodzą</li>
+              <li><code>helm install</code> na czystym namespace działa</li>
+              <li>Obrazy i replicas pochodzą z <code>values.yaml</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">K8S-8</span><span class="task-title">Skalowanie przez values</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>helm upgrade --set worker.replicas=5</code> daje 5 podów</li>
+              <li>Nowe workery od razu biorą zadania z kolejki</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 6 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 6</span>
+          <span class="epic-title">Terraform</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: odtworzyć namespace i release jedną komendą.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TF-1</span><span class="task-title">Struktura i providery</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>terraform init</code> pobiera providery bez błędów</li>
+              <li>Konfiguracja wskazuje <code>~/.kube/config</code></li>
+              <li><code>.gitignore</code> zawiera stan i <code>.terraform/</code></li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TF-2</span><span class="task-title">Namespace</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>terraform apply</code> tworzy namespace <code>jobs</code></li>
+              <li>Drugi apply nie zmienia niczego (idempotencja)</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TF-3</span><span class="task-title">Helm release</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li><code>terraform apply</code> instaluje chart</li>
+              <li>Zmiana <code>worker_replicas</code> zmienia liczbę podów</li>
+              <li><code>terraform destroy</code> usuwa release i namespace</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TF-4</span><span class="task-title">Weryfikacja planu</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li><code>terraform fmt -check</code> przechodzi</li>
+              <li><code>terraform validate</code> przechodzi</li>
+              <li>Plan jest czytelny: 1 namespace + 1 release, nic więcej</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+
+      <!-- EPIC 7 -->
+      <details class="epic" open>
+        <summary>
+          <span class="epic-id">EPIC 7</span>
+          <span class="epic-title">Testy i demo</span>
+        </summary>
+        <div class="epic-body">
+          <p style="color:var(--muted);font-size:.92rem">Cel: udowodnić, że działa — także gdy coś padnie.</p>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-1</span><span class="task-title">Testy jednostkowe</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Handlery <code>sum</code> i <code>csv_stats</code> mają testy</li>
+              <li>Walidacja odrzuca złe payloady</li>
+              <li><code>npm test</code> przechodzi lokalnie i w CI</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-2</span><span class="task-title">Test pełnego cyklu</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Skrypt wysyła zadanie i czeka na <code>completed</code></li>
+              <li>Wynik jest poprawny liczbowo</li>
+              <li>Czas oczekiwania jest ograniczony (timeout 30 s)</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-3</span><span class="task-title">Test równoległości</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>100 zadań kończy się w czasie krótszym niż przy 1 workerze</li>
+              <li>Żadne zadanie nie zostaje w <code>pending</code></li>
+              <li>Logi pokazują pracę więcej niż jednego poda</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-4</span><span class="task-title">Test awarii workera</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>Usunięcie poda w trakcie pracy nie gubi zadania</li>
+              <li>Kubernetes odtwarza poda w ciągu ~30 s</li>
+              <li>Zadanie kończy się <code>completed</code> po restarcie</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-5</span><span class="task-title">Scenariusz demo</span><span class="pill ok">S</span></div>
+            <ul class="ac">
+              <li>Scenariusz da się wykonać w 7–8 minut</li>
+              <li>Każdy krok ma komendę i oczekiwany wynik</li>
+              <li>Próba generalna odbyła się przed prezentacją</li>
+            </ul>
+          </div>
+
+          <div class="task">
+            <div class="task-head"><span class="task-id">TEST-6</span><span class="task-title">Dokumentacja końcowa</span><span class="pill warn">M</span></div>
+            <ul class="ac">
+              <li>README opisuje architekturę, uruchomienie i znane ograniczenia</li>
+              <li>Diagram jest aktualny</li>
+              <li>Jest sekcja „troubleshooting” z 5 najczęstszymi błędami</li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ================= 16. ZESPÓŁ ================= -->
+    <section class="section" id="zespol">
+      <h2><span class="section-num">16.</span>Podział pracy w zespole</h2>
+
+      <p>Podział według <strong>warstw</strong>, nie według plików. Każda osoba ma swoją działkę,
+      ale kontrakt w <code>packages/shared</code> jest wspólny i zmieniany tylko przez PR z review.</p>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Osoba</th><th>Główna działka</th><th>Zadania</th><th>Drugie oczy na</th></tr>
+          <tr>
+            <td><strong>Osoba 1</strong><br><span style="color:var(--muted);font-size:.85rem">API i baza</span></td>
+            <td>Express, PostgreSQL, walidacja</td>
+            <td>EPIC 2, API-6, TEST-1 (API)</td>
+            <td>schemat bazy, kody błędów</td>
+          </tr>
+          <tr>
+            <td><strong>Osoba 2</strong><br><span style="color:var(--muted);font-size:.85rem">Kolejka i workery</span></td>
+            <td>RabbitMQ, handlery, retry, Docker</td>
+            <td>EPIC 3, EPIC 4, TEST-2/3/4</td>
+            <td>idempotencja, ack</td>
+          </tr>
+          <tr>
+            <td><strong>Osoba 3</strong><br><span style="color:var(--muted);font-size:.85rem">Infra i dokumentacja</span></td>
+            <td>kind, Helm, Terraform, README</td>
+            <td>EPIC 5, EPIC 6, SET-3, TEST-5/6</td>
+            <td>czy da się odtworzyć od zera</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="label">Dzień 1 jest krytyczny</span>
+        <p>Zanim się rozdzielicie: wspólnie napiszcie <code>contracts.ts</code>, migrację SQL i <code>docker-compose.yml</code>
+        z samą infrastrukturą. To 3–4 godziny, które oszczędzają dwa dni integracji.</p>
+      </div>
+
+      <h3>Zasady współpracy</h3>
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>Git</h4>
+          <ul>
+            <li><code>main</code> zawsze działa</li>
+            <li>Gałęzie: <code>feat/api-post-jobs</code>, <code>feat/worker-retry</code></li>
+            <li>Commity: <code>feat:</code>, <code>fix:</code>, <code>docs:</code>, <code>chore:</code></li>
+            <li>PR do <code>main</code>, minimum 1 review</li>
+            <li>Bez „WIP” na <code>main</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Punkty integracji</h4>
+          <ul>
+            <li><strong>Koniec dnia 1:</strong> kontrakt + baza + compose</li>
+            <li><strong>Koniec dnia 3:</strong> API publikuje, worker konsumuje</li>
+            <li><strong>Koniec dnia 5:</strong> całość w Compose</li>
+            <li><strong>Koniec dnia 8:</strong> Helm działa w kind</li>
+            <li><strong>Dzień 9:</strong> zamrożenie funkcji, tylko błędy</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note warn">
+        <span class="label">Najczęstszy powód porażki zespołu</span>
+        <p>Każdy pracuje na swojej gałęzi przez tydzień i integruje na końcu. Wtedy pojawia się
+        20 konfliktów i nic nie działa. <strong>Integrujcie codziennie</strong>, nawet małymi kawałkami.</p>
+      </div>
+    </section>
+
+    <!-- ================= 17. PLAN ================= -->
+    <section class="section" id="plan">
+      <h2><span class="section-num">17.</span>Plan 10 dni</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Dzień</th><th>Cel</th><th>Efekt (Definition of Done)</th><th>Osoby</th></tr>
+          <tr>
+            <td><strong>1</strong></td>
+            <td>Fundamenty</td>
+            <td>Repo, monorepo, kontrakt Zod, migracja SQL, <code>compose up</code> z Postgresem i RabbitMQ</td>
+            <td>wszyscy</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td>API + worker szkielet</td>
+            <td><code>POST /jobs</code> zapisuje do bazy; worker łączy się z kolejką</td>
+            <td>1, 2</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td>Przepływ end-to-end</td>
+            <td>Zadanie <code>sum</code> przechodzi pending → completed</td>
+            <td>1, 2</td>
+          </tr>
+          <tr>
+            <td><strong>4</strong></td>
+            <td>Obsługa błędów</td>
+            <td>Walidacja, 404, retry, dead letter, <code>csv_stats</code></td>
+            <td>1, 2</td>
+          </tr>
+          <tr>
+            <td><strong>5</strong></td>
+            <td>Docker Compose</td>
+            <td>4 usługi, 3 repliki workera, demo.sh działa z hosta</td>
+            <td>2, 3</td>
+          </tr>
+          <tr>
+            <td><strong>6</strong></td>
+            <td>Kubernetes ręcznie</td>
+            <td>API, worker, Postgres, RabbitMQ działają przez <code>kubectl apply</code></td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <td><strong>7</strong></td>
+            <td>Helm</td>
+            <td><code>helm install</code> odtwarza całość; <code>replicas</code> w values</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <td><strong>8</strong></td>
+            <td>Terraform</td>
+            <td><code>terraform apply</code> = namespace + release; <code>destroy</code> sprząta</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <td><strong>9</strong></td>
+            <td>Testy i awarie</td>
+            <td>Testy jednostkowe, 100 zadań, zabity pod, skalowanie do 5</td>
+            <td>wszyscy</td>
+          </tr>
+          <tr>
+            <td><strong>10</strong></td>
+            <td>Dokumentacja i demo</td>
+            <td>README, diagram, próba generalna, plan B</td>
+            <td>wszyscy</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="note bad">
+        <span class="label">Bufor</span>
+        <p>Plan nie ma zapasu. Jeśli coś się obsunie, <strong>tnijcie zakres</strong>, nie sen:
+        najpierw rezygnujecie z <code>csv_stats</code>, potem z retry, na końcu z Terraforma.
+        Rdzeń (API + kolejka + worker + Docker) musi działać.</p>
+      </div>
+    </section>
+
+    <!-- ================= 18. TESTY ================= -->
+    <section class="section" id="testy">
+      <h2><span class="section-num">18.</span>Testy — minimum, które warto mieć</h2>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <h4>Jednostkowe <span class="pill ok">łatwe</span></h4>
+          <p>Bez Dockera. Czyste funkcje i walidacja.</p>
+          <ul>
+            <li><code>runSum([10,20,30])</code> → 60</li>
+            <li><code>csv_stats</code> z 3 wierszy</li>
+            <li><code>JobRequest.parse</code> odrzuca złe dane</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Integracyjne <span class="pill warn">średnie</span></h4>
+          <p>Testcontainers albo Compose z prawdziwą bazą.</p>
+          <ul>
+            <li>POST zapisuje rekord</li>
+            <li>GET zwraca 404 dla losowego UUID</li>
+            <li>Duplikat wiadomości nie liczy dwa razy</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>End-to-end <span class="pill warn">średnie</span></h4>
+          <p>Skrypt bash/Node na żywym systemie.</p>
+          <ul>
+            <li>100 zadań → wszystkie completed</li>
+            <li>Zły payload → 400</li>
+            <li>Zabity worker → zadanie kończy się</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>apps/worker/src/handlers/sum.test.ts</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>import { describe, it, expect } from "vitest";
+import { runSum } from "./sum.js";
+
+describe("runSum", () =&gt; {
+  it("sumuje liczby", () =&gt; {
+    const job = {
+      version: 1 as const,
+      jobId: "3f1c2a9e-8b7d-4c1a-9f2e-1d4b6a8c0e11",
+      type: "sum" as const,
+      payload: { numbers: [10, 20, 30] },
+      attempt: 1,
+    };
+    expect(runSum(job)).toEqual({ sum: 60 });
+  });
+});</code></pre>
+      </div>
+
+      <div class="note">
+        <span class="label">Nie przesadzajcie</span>
+        <p>Nie potrzebujecie 100% pokrycia. Potrzebujecie <strong>dowodu</strong>, że kluczowa logika
+        jest poprawna i że system nie gubi zadań. 10 dobrych testów wystarczy na ocenę 5.</p>
+      </div>
+    </section>
+
+    <!-- ================= 19. DEMO ================= -->
+    <section class="section" id="demo">
+      <h2><span class="section-num">19.</span>Scenariusz demo (7–8 minut)</h2>
+
+      <div class="note">
+        <span class="label">Przygotowanie 15 minut przed</span>
+        <p>Klaster utworzony, obrazy wgrane, <code>terraform apply</code> wykonany, terminal powiększony,
+        czcionka 16 px, panel RabbitMQ otwarty w drugiej karcie. <strong>Nie budujcie obrazów na żywo.</strong></p>
+      </div>
+
+      <ol class="steps">
+        <li><b>Pokaż architekturę (30 s).</b> Jeden slajd: klient → API → kolejka → workery → baza.
+        Powiedz, że to system asynchroniczny, więc API nie czeka na wynik.</li>
+
+        <li><b>Pokaż, że nic nie działa (15 s).</b> <code>kubectl get pods -n jobs</code> → pusto.
+        To buduje kontrast.</li>
+
+        <li><b>Deploy jedną komendą (60 s).</b> W <code>infra/terraform</code>:
+        <code>terraform apply -auto-approve</code>. Potem <code>kubectl get pods -n jobs -w</code>.
+        Skomentuj: „Terraform tworzy namespace i instaluje Helm chart”.</li>
+
+        <li><b>Wyślij zadanie (30 s).</b> <code>curl</code> z <code>sum</code>.
+        Pokaż odpowiedź 202 i ID. Od razu <code>GET</code> — status <code>pending</code>.</li>
+
+        <li><b>Pokaż wynik (20 s).</b> Po 2 sekundach <code>GET</code> → <code>completed</code>, <code>{"sum":60}</code>.</li>
+
+        <li><b>Skala (90 s).</b> <code>./scripts/demo.sh 100</code>.
+        W drugim terminalu <code>kubectl get pods -n jobs</code> — 3 workery.
+        W panelu RabbitMQ widać kolejkę malejącą. Potem <code>kubectl logs -f</code> z dwóch podów
+        obok siebie — widać, że pracują równolegle.</li>
+
+        <li><b>Awaria (90 s).</b> <code>kubectl delete pod -n jobs &lt;worker-pod&gt;</code>.
+        Pokaż, że Kubernetes tworzy nowy pod i że żadne zadanie nie zostało w <code>pending</code>.
+        To najważniejszy moment prezentacji.</li>
+
+        <li><b>Skalowanie (60 s).</b> <code>terraform apply -var="worker_replicas=5"</code>.
+        <code>kubectl get pods</code> → 5 podów. Wyślij 20 zadań, pokaż szybsze opróżnianie kolejki.</li>
+
+        <li><b>Podsumowanie (30 s).</b> Czego się nauczyliście: kontenery, kolejki, orkiestracja,
+        infrastruktura jako kod. Wspomnijcie o ograniczeniach (brak exactly-once, brak auth).</li>
+      </ol>
+
+      <div class="card">
+        <h4>Plan B, gdy coś padnie</h4>
+        <ul>
+          <li><strong>Klaster nie wstaje?</strong> Miejcie nagranie 2-minutowego demo (backup).</li>
+          <li><strong>Terraform się wysypał?</strong> <code>helm install</code> ręcznie — pokażecie, że chart działa.</li>
+          <li><strong>Brak internetu?</strong> Wszystkie obrazy wgrane wcześniej do kind.</li>
+          <li><strong>Projektor nie widzi terminala?</strong> Zwiększcie czcionkę i użyjcie ciemnego motywu.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= 20. RYZYKA ================= -->
+    <section class="section" id="ryzyka">
+      <h2><span class="section-num">20.</span>Ryzyka i jak je zmniejszyć</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Ryzyko</th><th>Objaw</th><th>Zapobieganie</th></tr>
+          <tr>
+            <td>Integracja na końcu</td>
+            <td>Wszystko „prawie działa”, 20 konfliktów</td>
+            <td>Codzienny merge do <code>main</code>, kontrakt w dniu 1</td>
+          </tr>
+          <tr>
+            <td>Za dużo funkcji</td>
+            <td>Nic nie jest skończone w dniu 10</td>
+            <td>Zamrożenie zakresu po dniu 5, lista YAGNI</td>
+          </tr>
+          <tr>
+            <td>Kubernetes pochłania cały czas</td>
+            <td>Dzień 6 i 7 znikają na debugowaniu YAML</td>
+            <td>Najpierw Compose, potem prosty YAML, Helm dopiero na końcu</td>
+          </tr>
+          <tr>
+            <td>Zgubione zadania</td>
+            <td>Status <code>pending</code> na zawsze</td>
+            <td>Ack po zapisie, retry, test zabijania poda</td>
+          </tr>
+          <tr>
+            <td>Obrazy nie aktualizują się w kind</td>
+            <td>Stary kod w podach</td>
+            <td><code>kind load</code> po każdym buildzie, <code>imagePullPolicy: IfNotPresent</code></td>
+          </tr>
+          <tr>
+            <td>Sekrety w repo</td>
+            <td>Hasła w Git history</td>
+            <td>Secret z <code>kubectl create secret</code>, <code>.gitignore</code>, nigdy plaintext</td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= 21. YAGNI ================= -->
+    <section class="section" id="yagni">
+      <h2><span class="section-num">21.</span>Czego nie robimy (YAGNI)</h2>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h4>❌ Poza zakresem</h4>
+          <ul>
+            <li>Frontend, panel administracyjny</li>
+            <li>Logowanie, role, JWT</li>
+            <li>KEDA i autoskalowanie po długości kolejki</li>
+            <li>Prometheus, Grafana, tracing</li>
+            <li>Dead letter UI</li>
+            <li>Wiele środowisk (dev/staging/prod)</li>
+            <li>CI/CD na GitLabie/GitHubie <span class="pill neutral">opcjonalnie</span></li>
+            <li>Testy wydajnościowe</li>
+            <li>Upload plików, S3</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>✅ Jeśli zostanie czas (w tej kolejności)</h4>
+          <ol>
+            <li>Prosty <code>GET /jobs?status=failed</code> do listy błędów</li>
+            <li>Healthcheck zależności (<code>/health/ready</code>)</li>
+            <li>GitHub Actions: <code>npm test</code> + <code>tsc</code></li>
+            <li>Grafana z jednym wykresem długości kolejki</li>
+            <li>KEDA — tylko jeśli reszta działa bez zarzutu</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="note ok">
+        <span class="label">Argument na obronę</span>
+        <p>„Świadomie nie zaimplementowaliśmy X, ponieważ celem było pokazanie przepływu
+        asynchronicznego, a X nie wnosiłby nowej wiedzy w budżecie 2 tygodni.”
+        To brzmi lepiej niż niedziałająca funkcja.</p>
+      </div>
+    </section>
+
+    <!-- ================= 22. SŁOWNICZEK ================= -->
+    <section class="section" id="slowniczek">
+      <h2><span class="section-num">22.</span>Słowniczek</h2>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Pojęcie</th><th>Po ludzku</th></tr>
+          <tr><td><strong>Asynchroniczność</strong></td><td>Nie czekasz na wynik. Wysyłasz zadanie i wracasz po nie później.</td></tr>
+          <tr><td><strong>Kolejka</strong></td><td>Lista zadań czekających na wykonanie. Worker bierze jedno, reszta czeka.</td></tr>
+          <tr><td><strong>Producer</strong></td><td>Ten, kto wkłada wiadomość do kolejki. U nas: API.</td></tr>
+          <tr><td><strong>Consumer</strong></td><td>Ten, kto wyjmuje wiadomość. U nas: worker.</td></tr>
+          <tr><td><strong>Ack (acknowledge)</strong></td><td>„Zrobione, możesz usunąć wiadomość”. Dopiero po zapisie do bazy.</td></tr>
+          <tr><td><strong>Nack</strong></td><td>„Nie udało się”. Trzeba uważać, żeby nie zrobić pętli.</td></tr>
+          <tr><td><strong>Prefetch</strong></td><td>Ile wiadomości worker bierze naraz. Ustawiamy 1.</td></tr>
+          <tr><td><strong>Idempotencja</strong></td><td>To samo zadanie wykonane dwa razy daje ten sam efekt, nie dwa wyniki.</td></tr>
+          <tr><td><strong>Dead letter</strong></td><td>„Kosz” na wiadomości, których nie udało się przetworzyć.</td></tr>
+          <tr><td><strong>Retry</strong></td><td>Ponowna próba po błędzie, zwykle z opóźnieniem.</td></tr>
+          <tr><td><strong>Replica</strong></td><td>Kopia procesu/poda. 3 repliki = 3 workery.</td></tr>
+          <tr><td><strong>Pod</strong></td><td>Najmniejsza jednostka w Kubernetesie — jeden lub kilka kontenerów.</td></tr>
+          <tr><td><strong>Deployment</strong></td><td>„Utrzymuj N kopii tej aplikacji”. Restartuje, gdy padnie.</td></tr>
+          <tr><td><strong>Service</strong></td><td>Stały adres sieciowy dla podów, które zmieniają IP.</td></tr>
+          <tr><td><strong>PVC</strong></td><td>Trwały dysk dla poda. Dane przeżywają restart.</td></tr>
+          <tr><td><strong>Probe</strong></td><td>Test, czy aplikacja żyje i czy jest gotowa przyjmować ruch.</td></tr>
+          <tr><td><strong>Helm chart</strong></td><td>Szablony YAML-i z parametrami (<code>values.yaml</code>).</td></tr>
+          <tr><td><strong>Terraform state</strong></td><td>Plik, w którym Terraform pamięta, co już stworzył.</td></tr>
+          <tr><td><strong>kind</strong></td><td>Kubernetes uruchomiony w kontenerach Dockera, lokalnie.</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= 23. ŚCIĄGA ================= -->
+    <section class="section" id="sciaga">
+      <h2><span class="section-num">23.</span>Ściąga komend</h2>
+
+      <div class="code">
+        <div class="code-head"><span>lokalnie — Docker Compose</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>docker compose up --build -d
+docker compose ps
+docker compose logs -f api worker
+docker compose down -v</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>klaster — kind + kubectl</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>kind create cluster --name jobs
+kind load docker-image job-system/api:0.1.0 --name jobs
+kind load docker-image job-system/worker:0.1.0 --name jobs
+
+kubectl get pods -n jobs
+kubectl get svc -n jobs
+kubectl logs -n jobs deploy/api --tail=50
+kubectl describe pod -n jobs &lt;nazwa&gt;
+kubectl delete pod -n jobs &lt;nazwa&gt;
+kubectl port-forward -n jobs svc/api 3000:3000</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>Helm</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>helm lint infra/helm/job-system
+helm template job-system infra/helm/job-system
+helm install job-system infra/helm/job-system -n jobs --create-namespace
+helm upgrade job-system infra/helm/job-system -n jobs --set worker.replicas=5
+helm uninstall job-system -n jobs</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>Terraform</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code>cd infra/terraform
+terraform init
+terraform validate
+terraform plan
+terraform apply
+terraform apply -var="worker_replicas=5"
+terraform destroy</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>zadania — curl</span><button class="copy" type="button">Kopiuj</button></div>
+<pre><code># suma
+curl -s -X POST localhost:3000/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"sum","payload":{"numbers":[1,2,3,4,5]}}'
+
+# CSV
+curl -s -X POST localhost:3000/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"csv_stats","payload":{"csv":"value\n10\n20\n30\n"}}'
+
+# status
+curl -s localhost:3000/jobs/&lt;ID&gt;
+
+# 100 zadań
+for i in $(seq 1 100); do
+  curl -s -X POST localhost:3000/jobs \
+    -H 'Content-Type: application/json' \
+    -d "{\"type\":\"sum\",\"payload\":{\"numbers\":[$i,$i,$i]}}" &gt; /dev/null
+done</code></pre>
+      </div>
+
+      <div class="note ok">
+        <span class="label">Ostatnia rada</span>
+        <p>Gdy utkniecie na dłużej niż 30 minut — <strong>poproście kogoś z zespołu</strong>.
+        Trzy osoby patrzące na ten sam błąd znajdują go szybciej niż jedna walcząca w ciszy.
+        A jeśli nadal nie idzie: uprośćcie zadanie, nie dodawajcie kodu.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="inner">
+    <p><strong>Rozproszony system przetwarzania zadań</strong> — plan projektu w TypeScripcie.
+    Dokument jednostronicowy, gotowy do druku (Ctrl/Cmd + P → zapisz jako PDF).</p>
+    <p>Wersja 1.0 · 6 listopada 2026 · zespół 3-osobowy · projekt zaliczeniowy z wirtualizacji i konteneryzacji</p>
+  </div>
+</footer>
+
+<script>
+  // ---- pasek postępu ----
+  const progress = document.getElementById('progress');
+  function updateProgress() {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    const pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+  document.addEventListener('scroll', updateProgress, { passive: true });
+  updateProgress();
+
+  // ---- podświetlanie aktywnej sekcji w spisie treści ----
+  const links = Array.from(document.querySelectorAll('#toc a'));
+  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      links.forEach(a => a.classList.remove('active'));
+      const link = byId.get(entry.target.id);
+      if (link) link.classList.add('active');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+
+  document.querySelectorAll('section.section').forEach(s => observer.observe(s));
+
+  // ---- kopiowanie kodu ----
+  document.querySelectorAll('.code').forEach(box => {
+    const btn = box.querySelector('.copy');
+    const pre = box.querySelector('pre');
+    if (!btn || !pre) return;
+
+    btn.addEventListener('click', async () => {
+      const text = pre.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Skopiowano ✓';
+      } catch {
+        // fallback dla starszych przeglądarek / http
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        btn.textContent = 'Skopiowano ✓';
+      }
+      setTimeout(() => { btn.textContent = 'Kopiuj'; }, 1500);
+    });
+  });
+</script>
+</body>
+</html>
